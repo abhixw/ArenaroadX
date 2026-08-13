@@ -2,6 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.audit_middleware import AuditLogMiddleware
@@ -23,6 +24,7 @@ from app.routers import (
     result_imports,
     results,
     tournaments,
+    users,
 )
 
 logger = logging.getLogger("tournament_backend")
@@ -41,7 +43,29 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+ALLOWED_ORIGINS = [origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()]
+
 app.add_middleware(AuditLogMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+def _with_cors_headers(request: Request, response: JSONResponse) -> JSONResponse:
+    """FastAPI's bare-Exception handler runs inside Starlette's ServerErrorMiddleware, which
+    sits *outside* CORSMiddleware (see Starlette's Starlette.build_middleware_stack) -- so any
+    response built here never gets CORSMiddleware's headers and the browser reports a
+    confusing "CORS policy" error instead of the real one. Add them manually."""
+    origin = request.headers.get("origin")
+    if origin in ALLOWED_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Vary"] = "Origin"
+    return response
 
 
 @app.exception_handler(AppError)
@@ -56,10 +80,11 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.exception("Unhandled exception while processing %s %s", request.method, request.url.path)
     message = str(exc) if settings.DEBUG else "An unexpected error occurred."
-    return JSONResponse(
+    response = JSONResponse(
         status_code=500,
         content={"error": {"code": "INTERNAL_SERVER_ERROR", "message": message}},
     )
+    return _with_cors_headers(request, response)
 
 
 app.include_router(auth.router)
@@ -87,11 +112,13 @@ app.include_router(leaderboard.router)
 app.include_router(leaderboard.users_router)
 app.include_router(result_imports.router)
 app.include_router(prizes.router)
+app.include_router(prizes.users_router)
 app.include_router(prizes.admin_tournament_router)
 app.include_router(prizes.admin_prizes_router)
 app.include_router(refunds.admin_tournament_router)
 app.include_router(refunds.admin_refunds_router)
 app.include_router(audit_logs.router)
+app.include_router(users.admin_router)
 
 
 @app.get("/", tags=["health"], summary="Health check")

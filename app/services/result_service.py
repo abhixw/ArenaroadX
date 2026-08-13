@@ -111,6 +111,13 @@ async def enter_match_result(match_id: PydanticObjectId, payload: MatchResultCre
     return match_result
 
 
+async def list_match_results(match_id: PydanticObjectId) -> list[MatchResult]:
+    match = await match_repository.get_by_id(match_id)
+    if match is None:
+        raise MatchNotFoundError()
+    return await match_result_repository.list_by_match(match_id)
+
+
 async def update_match_result(match_result_id: PydanticObjectId, payload: MatchResultUpdate) -> MatchResult:
     match_result = await match_result_repository.get_by_id(match_result_id)
     if match_result is None:

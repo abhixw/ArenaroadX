@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     COOKIE_SECURE: bool = False
     COOKIE_SAMESITE: str = "lax"
 
+    # CORS -- comma-separated list of allowed frontend origins
+    CORS_ORIGINS: str = "http://localhost:5173"
+
     # Razorpay
     RAZORPAY_KEY_ID: str = ""
     RAZORPAY_KEY_SECRET: str = ""

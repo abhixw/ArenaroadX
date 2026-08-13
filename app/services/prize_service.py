@@ -8,7 +8,7 @@ from app.models.prize import Prize, PrizePayoutStatus
 from app.models.tournament import TournamentStatus
 from app.models.transaction import TransactionType
 from app.repositories import prize_repository, tournament_repository, transaction_repository, user_repository
-from app.schemas.prize import PrizeCreate, PrizeResponse, PrizeUpdate
+from app.schemas.prize import MyPrizeResponse, PrizeCreate, PrizeResponse, PrizeUpdate
 
 _PAISE_PER_RUPEE = 100
 
@@ -40,6 +40,26 @@ async def list_tournament_prizes(tournament_id: PydanticObjectId) -> list[Prize]
     if tournament is None:
         raise TournamentNotFoundError()
     return await prize_repository.list_by_tournament(tournament_id)
+
+
+async def list_my_prizes(user_id: PydanticObjectId) -> list[MyPrizeResponse]:
+    prizes = await prize_repository.list_by_user(user_id)
+    entries = []
+    for p in prizes:
+        tournament = await tournament_repository.get_by_id(p.tournament_id)
+        entries.append(
+            MyPrizeResponse(
+                id=p.id,
+                tournament_id=p.tournament_id,
+                tournament_name=tournament.name if tournament else "",
+                rank=p.rank,
+                amount=_to_rupees(p.amount_paise),
+                payout_status=p.payout_status,
+                paid_at=p.paid_at,
+                created_at=p.created_at,
+            )
+        )
+    return entries
 
 
 async def create_prize(tournament_id: PydanticObjectId, payload: PrizeCreate) -> Prize:

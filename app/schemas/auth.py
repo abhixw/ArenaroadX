@@ -48,3 +48,29 @@ class LoginRequest(BaseModel):
 
     email: EmailStr
     password: str
+
+
+class UpdateProfileRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = None
+    phone: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def name_not_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        value = value.strip()
+        if not value:
+            raise ValueError("Name must not be empty.")
+        return value
+
+    @field_validator("phone")
+    @classmethod
+    def phone_valid(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        if not PHONE_PATTERN.match(value):
+            raise ValueError("Phone number must be 10-15 digits, with an optional leading +.")
+        return value

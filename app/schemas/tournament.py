@@ -123,6 +123,9 @@ class TournamentResponse(BaseModel):
     entry_fee: Decimal
     prize_pool: Decimal
     max_players: int
+    # Confirmed + still-reserved (unpaid) registrations -- how full the tournament actually
+    # is right now. Mirrors Tournament.reserved_slots (see that field's docstring).
+    registered_players: int
     start_time: datetime
     registration_deadline: datetime
     game_url: str | None

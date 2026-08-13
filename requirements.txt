@@ -1,9 +1,12 @@
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
-beanie==2.2.0
+# beanie 2.2.0/pydantic 2.10.4 don't support Python 3.14 (no wheels yet); these are the
+# nearest versions that do. Verified: `import app.main` succeeds, full requirements install
+# cleanly. Revert to the tighter pins if/when this deploys on Python <3.14.
+beanie==2.0.0
 pymongo==4.17.0
 dnspython==2.8.0
-pydantic==2.10.4
+pydantic==2.13.4
 pydantic-settings==2.7.1
 email-validator==2.2.0
 python-dotenv==1.0.1

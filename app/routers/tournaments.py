@@ -70,6 +70,16 @@ async def close_registration(tournament_id: PydanticObjectId) -> DataResponse[To
 
 
 @admin_router.post(
+    "/{tournament_id}/mark-ready",
+    response_model=DataResponse[TournamentResponse],
+    summary="Mark the tournament ready (REGISTRATION_CLOSED -> READY)",
+)
+async def mark_ready(tournament_id: PydanticObjectId) -> DataResponse[TournamentResponse]:
+    tournament = await tournament_service.mark_ready(tournament_id)
+    return DataResponse(data=tournament_service.to_response(tournament))
+
+
+@admin_router.post(
     "/{tournament_id}/start",
     response_model=DataResponse[TournamentResponse],
     summary="Start the tournament (READY -> LIVE)",

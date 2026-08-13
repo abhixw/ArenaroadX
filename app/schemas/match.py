@@ -64,3 +64,13 @@ class MatchAccessResponse(BaseModel):
     room_id: str | None
     room_password: str | None
     access_info: str | None
+
+
+class MatchAdminResponse(MatchResponse):
+    """Admin-facing view -- unlike MatchResponse, includes room credentials directly (an admin
+    configuring a match needs to see/edit what they set; MatchResponse's redaction is a
+    player-facing concern, not an admin one)."""
+
+    room_id: str | None
+    room_password: str | None
+    access_info: str | None

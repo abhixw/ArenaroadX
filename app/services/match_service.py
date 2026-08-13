@@ -11,6 +11,7 @@ from app.core.exceptions import (
 )
 from app.models.match import Match, MatchStatus
 from app.models.match_participant import MatchParticipant, MatchParticipationStatus
+from app.models.registration import RegistrationStatus
 from app.repositories import match_participant_repository, match_repository, registration_repository, tournament_repository
 from app.schemas.match import MatchCreate, MatchUpdate
 
@@ -84,6 +85,22 @@ async def get_match_access(match_id: PydanticObjectId, user_id: PydanticObjectId
     match = await get_match(match_id)
 
     participant = await match_participant_repository.get_by_match_and_user(match_id, user_id)
+    if participant is None:
+        # Roster is normally snapshotted at match-creation time (see create_match's
+        # docstring), which misses anyone who registers afterward. Lazily join in anyone
+        # who's since become a CONFIRMED registrant for this match's tournament, rather than
+        # permanently locking them out of a match created before they registered.
+        registration = await registration_repository.get_active_by_user_and_tournament(user_id, match.tournament_id)
+        if registration is not None and registration.registration_status == RegistrationStatus.CONFIRMED:
+            participant = MatchParticipant(
+                match_id=match_id,
+                tournament_id=match.tournament_id,
+                user_id=user_id,
+                game_account_id=registration.game_account_id,
+                game_uid=registration.game_uid,
+            )
+            await match_participant_repository.bulk_create([participant])
+
     if participant is None or participant.participation_status == MatchParticipationStatus.DISQUALIFIED:
         raise NotAMatchParticipantError()
 
