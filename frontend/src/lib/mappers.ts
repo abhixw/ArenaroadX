@@ -109,6 +109,8 @@ export interface TournamentDto {
   description: string | null;
   entry_fee: number | string;
   prize_pool: number | string;
+  first_prize?: number | string | null;
+  second_prize?: number | string | null;
   max_players: number;
   registered_players: number;
   start_time: string;
@@ -133,6 +135,8 @@ export function mapTournament(dto: TournamentDto, gameImageUrl?: string | null):
     gameUrl: dto.game_url,
     fee: Number(dto.entry_fee),
     prizePool: Number(dto.prize_pool),
+    firstPrize: dto.first_prize != null ? Number(dto.first_prize) : null,
+    secondPrize: dto.second_prize != null ? Number(dto.second_prize) : null,
     maxPlayers: dto.max_players,
     registeredPlayers: dto.registered_players,
     status: dto.status as Tournament["status"],

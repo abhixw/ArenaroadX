@@ -41,3 +41,18 @@ class PaymentResponse(BaseModel):
     status: PaymentStatus
     created_at: datetime
     updated_at: datetime
+
+
+class AdminPaymentResponse(BaseModel):
+    id: PydanticObjectId
+    user_id: PydanticObjectId
+    player_name: str
+    player_email: str
+    tournament_id: PydanticObjectId
+    tournament_name: str
+    amount_paise: int
+    currency: str
+    razorpay_order_id: str
+    razorpay_payment_id: str | None
+    status: PaymentStatus
+    created_at: datetime

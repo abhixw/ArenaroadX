@@ -43,6 +43,9 @@ function buildUrl(path: string, query?: Record<string, QueryValue>): string {
 
 interface ErrorEnvelope {
   error?: { code?: string; message?: string };
+  // FastAPI's built-in request-validation errors (422) bypass our AppError envelope and use
+  // this shape instead -- a list of {loc, msg} entries, one per invalid field.
+  detail?: { loc?: (string | number)[]; msg?: string }[] | string;
 }
 
 interface DataEnvelope<T> {
@@ -82,7 +85,13 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   if (!response.ok) {
     const errPayload = payload as ErrorEnvelope | null;
-    const message = errPayload?.error?.message ?? `Request failed (${response.status}).`;
+    let message = errPayload?.error?.message;
+    if (!message && errPayload?.detail) {
+      message = Array.isArray(errPayload.detail)
+        ? errPayload.detail.map((d) => d.msg).filter(Boolean).join(" ")
+        : errPayload.detail;
+    }
+    message ??= `Request failed (${response.status}).`;
     const code = errPayload?.error?.code ?? "UNKNOWN_ERROR";
     if (response.status === 401) {
       onUnauthorized?.();

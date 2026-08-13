@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Plus, Search } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -10,51 +10,50 @@ import { useAsyncData } from "@/hooks/useAsyncData";
 import { listTournaments } from "@/api/admin/tournaments";
 import { getGames } from "@/api/games";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { TournamentStatus } from "@/types";
 import { CreateTournamentModal } from "@/components/admin/CreateTournamentModal";
-
-const STATUS_FILTERS: { value: TournamentStatus | "ALL"; label: string }[] = [
-  { value: "ALL", label: "All" },
-  { value: "DRAFT", label: "Draft" },
-  { value: "REGISTRATION_OPEN", label: "Registration Open" },
-  { value: "REGISTRATION_CLOSED", label: "Registration Closed" },
-  { value: "READY", label: "Ready" },
-  { value: "LIVE", label: "Live" },
-  { value: "RESULTS_PENDING", label: "Results Pending" },
-  { value: "RESULTS_REVIEW", label: "Results Review" },
-  { value: "RESULTS_PUBLISHED", label: "Results Published" },
-  { value: "COMPLETED", label: "Completed" },
-  { value: "CANCELLED", label: "Cancelled" },
-];
 
 export default function AdminTournaments() {
   const { data: tournaments, loading, refetch } = useAsyncData(listTournaments);
   const { data: games } = useAsyncData(getGames);
-  const [statusFilter, setStatusFilter] = useState<TournamentStatus | "ALL">("ALL");
   const [creating, setCreating] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get("search") ?? "");
+
+  useEffect(() => {
+    setQuery(searchParams.get("search") ?? "");
+    // Re-sync whenever the URL's search param changes (e.g. a new search from the top bar
+    // while already on this page), not just on first mount.
+  }, [searchParams]);
+
+  function onQueryChange(value: string) {
+    setQuery(value);
+    if (value.trim()) setSearchParams({ search: value.trim() });
+    else setSearchParams({});
+  }
 
   const gameMap = useMemo(() => new Map((games ?? []).map((g) => [g.id, g])), [games]);
   const filtered = (tournaments ?? [])
-    .filter((t) => statusFilter === "ALL" || t.status === statusFilter)
+    .filter((t) => {
+      const q = query.trim().toLowerCase();
+      if (!q) return true;
+      const game = gameMap.get(t.gameId);
+      return t.name.toLowerCase().includes(q) || game?.name.toLowerCase().includes(q);
+    })
     .sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime());
 
   return (
     <div>
       <Topbar title="Tournaments" subtitle="Create and manage tournaments." />
 
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          {STATUS_FILTERS.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setStatusFilter(f.value)}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                statusFilter === f.value ? "bg-primary-500 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative sm:max-w-xs sm:flex-1">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            placeholder="Search by tournament or game..."
+            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm outline-none placeholder:text-gray-400 focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+          />
         </div>
         <Button onClick={() => setCreating(true)} className="shrink-0">
           <Plus size={15} /> Create
@@ -102,7 +101,9 @@ export default function AdminTournaments() {
               </tbody>
             </table>
             {filtered.length === 0 ? (
-              <p className="p-8 text-center text-sm text-gray-400">No tournaments match this filter.</p>
+              <p className="p-8 text-center text-sm text-gray-400">
+                {query.trim() ? "No tournaments match your search." : "No tournaments yet."}
+              </p>
             ) : null}
           </div>
         )}

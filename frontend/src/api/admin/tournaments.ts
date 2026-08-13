@@ -8,6 +8,8 @@ export interface TournamentInput {
   description?: string;
   entryFee: number;
   prizePool: number;
+  firstPrize?: number;
+  secondPrize?: number;
   maxPlayers: number;
   startTime: string; // ISO, must be tz-aware
   registrationDeadline: string; // ISO, must be before startTime
@@ -23,6 +25,8 @@ function toCreatePayload(input: TournamentInput) {
     description: input.description || undefined,
     entry_fee: input.entryFee,
     prize_pool: input.prizePool,
+    first_prize: input.firstPrize,
+    second_prize: input.secondPrize,
     max_players: input.maxPlayers,
     start_time: input.startTime,
     registration_deadline: input.registrationDeadline,
@@ -55,6 +59,8 @@ export async function updateTournament(id: string, input: Partial<TournamentInpu
     ...(input.description !== undefined ? { description: input.description || null } : {}),
     ...(input.entryFee !== undefined ? { entry_fee: input.entryFee } : {}),
     ...(input.prizePool !== undefined ? { prize_pool: input.prizePool } : {}),
+    ...(input.firstPrize !== undefined ? { first_prize: input.firstPrize } : {}),
+    ...(input.secondPrize !== undefined ? { second_prize: input.secondPrize } : {}),
     ...(input.maxPlayers !== undefined ? { max_players: input.maxPlayers } : {}),
     ...(input.startTime !== undefined ? { start_time: input.startTime } : {}),
     ...(input.registrationDeadline !== undefined ? { registration_deadline: input.registrationDeadline } : {}),

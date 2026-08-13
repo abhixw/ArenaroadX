@@ -12,7 +12,9 @@ import { formatDate } from "@/lib/utils";
 
 export default function AdminPlayers() {
   const [search, setSearch] = useState("");
-  const { data: users, loading } = useAsyncData(() => listUsers(search || undefined), [search]);
+  const { data: allUsers, loading } = useAsyncData(() => listUsers(search || undefined), [search]);
+  // This page manages players, not the operator account -- admins never belong here.
+  const users = allUsers?.filter((u) => u.role !== "ADMIN");
 
   return (
     <div>

@@ -17,6 +17,7 @@ interface RazorpayOptions {
   description?: string;
   prefill?: { name?: string; email?: string; contact?: string };
   theme?: { color?: string };
+  method?: { upi?: boolean; card?: boolean; netbanking?: boolean; wallet?: boolean };
   handler: (response: RazorpayCheckoutResult) => void;
   modal?: { ondismiss?: () => void };
 }
@@ -75,6 +76,11 @@ export async function openRazorpayCheckout(options: {
       description: options.description,
       prefill: options.prefill,
       theme: { color: "#7c5cff" },
+      // Explicitly request UPI alongside the other methods -- some accounts/checkout builds
+      // default to a narrower method set unless UPI is asked for by name. Left as Razorpay's
+      // default layout (no custom config.display) so it simply omits whatever the account
+      // doesn't actually support, instead of showing an empty block for it.
+      method: { upi: true, card: true, netbanking: true, wallet: true },
       handler: (response) => resolve(response),
       modal: {
         ondismiss: () => reject(new Error("Payment window closed before completing.")),

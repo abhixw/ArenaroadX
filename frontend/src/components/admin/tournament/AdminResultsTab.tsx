@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Loader2, Upload } from "lucide-react";
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -8,21 +8,17 @@ import { useAsyncData } from "@/hooks/useAsyncData";
 import { ApiError } from "@/api/client";
 import { listMatches } from "@/api/admin/matches";
 import {
-  commitResultImport,
   correctMatchResult,
   enterMatchResult,
-  getCsvTemplateUrl,
   listMatchResults,
   listTournamentResults,
   publishResults,
   reviewResults,
   updateMatchResult,
-  uploadResultImport,
-  validateResultImport,
 } from "@/api/admin/results";
 import { ScoringRuleCard } from "@/components/admin/tournament/ScoringRuleCard";
 import type { Tournament } from "@/types";
-import type { MatchResult, ResultImport } from "@/types/admin";
+import type { MatchResult } from "@/types/admin";
 
 const PUBLISHED_STATUSES = ["RESULTS_PUBLISHED", "COMPLETED"];
 
@@ -157,7 +153,6 @@ export function AdminResultsTab({ tournament }: { tournament: Tournament }) {
         ) : (
           <div className="mt-4 space-y-5">
             <ManualEntryForm matchId={activeMatchId!} onEntered={refetchResults} />
-            <CsvImportPanel matchId={activeMatchId!} onCommitted={refetchResults} />
             <MatchResultsTable
               results={matchResults ?? []}
               loading={loadingResults}
@@ -231,133 +226,6 @@ function ManualEntryForm({ matchId, onEntered }: { matchId: string; onEntered: (
       <Button size="sm" variant="secondary" className="mt-2" onClick={handleSubmit} disabled={busy}>
         Add Result
       </Button>
-    </div>
-  );
-}
-
-function CsvImportPanel({ matchId, onCommitted }: { matchId: string; onCommitted: () => void }) {
-  const [resultImport, setResultImport] = useState<ResultImport | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const templateUrl = useMemo(() => getCsvTemplateUrl(), []);
-
-  async function handleUpload(file: File) {
-    setBusy(true);
-    setError(null);
-    try {
-      const imported = await uploadResultImport(matchId, file);
-      setResultImport(imported);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleValidate() {
-    if (!resultImport) return;
-    setBusy(true);
-    setError(null);
-    try {
-      setResultImport(await validateResultImport(resultImport.id));
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Validation failed.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleCommit() {
-    if (!resultImport) return;
-    setBusy(true);
-    setError(null);
-    try {
-      setResultImport(await commitResultImport(resultImport.id));
-      onCommitted();
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Commit failed.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="rounded-xl border border-dashed border-gray-200 p-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-gray-500">CSV Import</p>
-        <a
-          href={templateUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="text-xs font-semibold text-primary-600 hover:underline"
-        >
-          Download template
-        </a>
-      </div>
-      <label className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-500 hover:bg-app-bg">
-        <Upload size={14} />
-        {resultImport ? resultImport.filename : "Choose CSV file"}
-        <input
-          type="file"
-          accept=".csv"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleUpload(file);
-          }}
-        />
-      </label>
-      {error ? <p className="mt-2 text-xs font-medium text-danger-600">{error}</p> : null}
-      {resultImport ? (
-        <div className="mt-3 space-y-2">
-          <div className="flex flex-wrap gap-2 text-xs">
-            <Badge tone="success">{resultImport.validCount} valid</Badge>
-            <Badge tone="danger">{resultImport.invalidCount} invalid</Badge>
-            <Badge tone="warning">{resultImport.duplicateCount} duplicate</Badge>
-            <Badge tone="gray">{resultImport.unknownCount} unknown</Badge>
-            <Badge tone="primary">{resultImport.status}</Badge>
-          </div>
-          {resultImport.rows.length > 0 ? (
-            <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-100">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-app-bg/60 text-left text-gray-400">
-                    <th className="px-2 py-1.5">Row</th>
-                    <th className="px-2 py-1.5">Game UID</th>
-                    <th className="px-2 py-1.5">Status</th>
-                    <th className="px-2 py-1.5">Reason</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resultImport.rows.map((r) => (
-                    <tr key={r.rowNumber} className="border-t border-gray-50">
-                      <td className="px-2 py-1.5">{r.rowNumber}</td>
-                      <td className="px-2 py-1.5">{r.gameUid ?? "—"}</td>
-                      <td className="px-2 py-1.5">{r.rowStatus}</td>
-                      <td className="px-2 py-1.5 text-gray-400">{r.reason ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-          <div className="flex gap-2">
-            {resultImport.status === "UPLOADED" ? (
-              <Button size="sm" onClick={handleValidate} disabled={busy}>
-                Validate
-              </Button>
-            ) : null}
-            {resultImport.status === "VALIDATED" ? (
-              <Button size="sm" onClick={handleCommit} disabled={busy}>
-                Commit Valid Rows
-              </Button>
-            ) : null}
-            {resultImport.status === "COMMITTED" ? (
-              <Badge tone="success">Committed</Badge>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

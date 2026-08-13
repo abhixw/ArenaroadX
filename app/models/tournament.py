@@ -29,6 +29,10 @@ class Tournament(BaseDocument):
     # and matches what's sent to Razorpay directly. Converted to rupees only at the API boundary.
     entry_fee_paise: int = Field(ge=0)
     prize_pool_paise: int = Field(ge=0)
+    # Per-rank breakdown of prize_pool_paise, shown to users browsing before they register.
+    # Optional since not every tournament advertises a 1st/2nd split up front.
+    first_prize_paise: int | None = Field(default=None, ge=0)
+    second_prize_paise: int | None = Field(default=None, ge=0)
     max_players: int = Field(gt=0)
     # Atomically incremented/decremented as registrations are created/released -- this is how
     # capacity is enforced without row-level locking (MongoDB has no SELECT ... FOR UPDATE);

@@ -23,6 +23,10 @@ async def list_by_user(user_id: PydanticObjectId) -> list[Payment]:
     return await Payment.find(Payment.user_id == user_id).sort(-Payment.created_at).to_list()
 
 
+async def list_all() -> list[Payment]:
+    return await Payment.find_all().sort(-Payment.created_at).to_list()
+
+
 async def create(**fields) -> Payment:
     payment = Payment(**fields)
     await payment.insert()

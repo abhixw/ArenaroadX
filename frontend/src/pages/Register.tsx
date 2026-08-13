@@ -24,7 +24,7 @@ export default function Register() {
     setError(null);
     setBusy(true);
     try {
-      await register(name, email, password, phone);
+      await register(name, email, password, phone.replace(/[\s-]/g, ""));
       navigate("/");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not create your account. Please try again.");

@@ -13,7 +13,14 @@ from app.core.exceptions import (
 from app.models.payment import Payment, PaymentStatus
 from app.models.registration import RegistrationPaymentStatus, RegistrationStatus
 from app.models.transaction import TransactionType
-from app.repositories import payment_repository, registration_repository, tournament_repository, transaction_repository
+from app.repositories import (
+    payment_repository,
+    registration_repository,
+    tournament_repository,
+    transaction_repository,
+    user_repository,
+)
+from app.schemas.payment import AdminPaymentResponse
 
 
 def _client() -> razorpay.Client:
@@ -141,6 +148,39 @@ async def verify_payment(
 
 async def list_my_payments(user_id: PydanticObjectId) -> list[Payment]:
     return await payment_repository.list_by_user(user_id)
+
+
+async def list_all_payments() -> list[AdminPaymentResponse]:
+    payments = await payment_repository.list_all()
+
+    user_ids = {p.user_id for p in payments}
+    tournament_ids = {p.tournament_id for p in payments}
+    users = {u.id: u for u in [await user_repository.get_by_id(uid) for uid in user_ids] if u is not None}
+    tournaments = {
+        t.id: t for t in [await tournament_repository.get_by_id(tid) for tid in tournament_ids] if t is not None
+    }
+
+    entries = []
+    for p in payments:
+        user = users.get(p.user_id)
+        tournament = tournaments.get(p.tournament_id)
+        entries.append(
+            AdminPaymentResponse(
+                id=p.id,
+                user_id=p.user_id,
+                player_name=user.name if user else "Unknown",
+                player_email=user.email if user else "",
+                tournament_id=p.tournament_id,
+                tournament_name=tournament.name if tournament else "Unknown",
+                amount_paise=p.amount_paise,
+                currency=p.currency,
+                razorpay_order_id=p.razorpay_order_id,
+                razorpay_payment_id=p.razorpay_payment_id,
+                status=p.status,
+                created_at=p.created_at,
+            )
+        )
+    return entries
 
 
 async def get_payment(*, payment_id: PydanticObjectId, user_id: PydanticObjectId, is_admin: bool) -> Payment:

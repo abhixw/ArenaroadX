@@ -6,12 +6,11 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { NextMatchCard } from "@/components/dashboard/NextMatchCard";
 import { RecentResultsList } from "@/components/dashboard/RecentResultsList";
 import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
-import { TournamentCard } from "@/components/dashboard/TournamentCard";
 import { TournamentRow } from "@/components/dashboard/TournamentRow";
 import { Card } from "@/components/ui/Card";
 import { Tabs } from "@/components/ui/Tabs";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getMyTournaments } from "@/api/registrations";
@@ -34,7 +33,7 @@ export default function Dashboard() {
   const [tab, setTab] = useState<MyTournamentTab>("ALL");
 
   const { data: myTournaments, loading: loadingMine } = useAsyncData(getMyTournaments);
-  const { data: tournaments, loading: loadingTournaments } = useAsyncData(getTournaments);
+  const { data: tournaments } = useAsyncData(getTournaments);
   const { data: games } = useAsyncData(getGames);
   const { data: nextMatch, loading: loadingNext } = useAsyncData(
     () => (myTournaments ? findNextMatch(myTournaments) : Promise.resolve(null)),
@@ -58,11 +57,6 @@ export default function Dashboard() {
     ).length ?? 0;
 
   const filteredMine = (myTournaments ?? []).filter((e) => matchesTab(e.tournament, tab)).slice(0, 3);
-
-  const exploreTournaments = (tournaments ?? [])
-    .filter((t) => t.status === "REGISTRATION_OPEN")
-    .filter((t) => !(myTournaments ?? []).some((e) => e.tournament.id === t.id))
-    .slice(0, 4);
 
   return (
     <div>
@@ -140,30 +134,6 @@ export default function Dashboard() {
                   ) : null;
                 })
               )}
-            </div>
-
-            <Link
-              to="/my-tournaments"
-              className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary-600 hover:underline"
-            >
-              View all tournaments →
-            </Link>
-          </Card>
-
-          <Card className="p-5">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-bold text-gray-900">Explore Tournaments</p>
-              <Link to="/tournaments" className="text-xs font-semibold text-primary-600 hover:underline">
-                View all
-              </Link>
-            </div>
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {loadingTournaments
-                ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
-                : exploreTournaments.map((t) => {
-                    const game = gameMap.get(t.gameId);
-                    return game ? <TournamentCard key={t.id} tournament={t} game={game} /> : null;
-                  })}
             </div>
           </Card>
         </div>

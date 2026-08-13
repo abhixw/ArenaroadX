@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { CalendarDays, Gamepad2, LayoutGrid, ScrollText, Shield, Users } from "lucide-react";
+import { CalendarDays, CircleDollarSign, LayoutGrid, LogOut, Shield, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar } from "@/components/ui/Avatar";
@@ -7,13 +7,12 @@ import { Avatar } from "@/components/ui/Avatar";
 const navItems = [
   { to: "/admin", label: "Dashboard", icon: LayoutGrid, end: true },
   { to: "/admin/tournaments", label: "Tournaments", icon: CalendarDays },
-  { to: "/admin/games", label: "Games", icon: Gamepad2 },
   { to: "/admin/players", label: "Players", icon: Users },
-  { to: "/admin/audit-logs", label: "Audit Logs", icon: ScrollText },
+  { to: "/admin/payments", label: "Payments", icon: CircleDollarSign },
 ];
 
 export function AdminSidebar({ mobile = false }: { mobile?: boolean }) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   return (
     <aside
@@ -27,7 +26,7 @@ export function AdminSidebar({ mobile = false }: { mobile?: boolean }) {
           <Shield size={18} fill="currentColor" />
         </div>
         <div>
-          <span className="block text-lg font-extrabold tracking-tight text-white">Tourney</span>
+          <span className="block text-lg font-extrabold tracking-tight text-white">ArenaroadX</span>
           <span className="block text-[11px] font-semibold uppercase tracking-wider text-primary-400">Admin</span>
         </div>
       </div>
@@ -53,12 +52,20 @@ export function AdminSidebar({ mobile = false }: { mobile?: boolean }) {
         ))}
       </nav>
 
-      <div className="flex items-center gap-3 border-t border-white/10 px-4 py-4">
-        <Avatar name={user?.name ?? "Admin"} size={36} />
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-white">{user?.handle ?? "Admin"}</p>
-          <p className="text-xs text-gray-400">Administrator</p>
+      <div className="border-t border-white/10 px-4 py-4">
+        <div className="flex items-center gap-3">
+          <Avatar name={user?.name ?? "Admin"} size={36} />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-white">{user?.handle ?? "Admin"}</p>
+            <p className="text-xs text-gray-400">Administrator</p>
+          </div>
         </div>
+        <button
+          onClick={() => void logout()}
+          className="mt-3 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-gray-200"
+        >
+          <LogOut size={16} /> Log out
+        </button>
       </div>
     </aside>
   );

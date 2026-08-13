@@ -32,9 +32,3 @@ export async function verifyPayment(input: {
   });
   return mapPayment(dto);
 }
-
-// GET /api/payments
-export async function getMyPayments(): Promise<Payment[]> {
-  const dtos = await http.get<PaymentDto[]>("/api/payments");
-  return dtos.map(mapPayment);
-}

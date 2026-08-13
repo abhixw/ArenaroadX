@@ -37,7 +37,6 @@ export function RegistrationFlow({
   const [step, setStep] = useState<Step>("account");
   const [accounts, setAccounts] = useState<GameAccount[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
-  const [newUid, setNewUid] = useState("");
   const [newUsername, setNewUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [registration, setRegistration] = useState<Registration | null>(null);
@@ -51,7 +50,6 @@ export function RegistrationFlow({
     setError(null);
     setRegistration(null);
     setOrder(null);
-    setNewUid("");
     setNewUsername("");
 
     if (resumePendingPayment) {
@@ -83,17 +81,18 @@ export function RegistrationFlow({
     setBusy(true);
     setError(null);
     try {
-      const uid = newUid.trim();
       const username = newUsername.trim();
       let gameUid: string;
       let gameUsername: string;
-      if (uid && username) {
-        gameUid = uid;
+      if (username) {
+        // Smash Karts (and similar) have no player-facing UID -- the in-game name is the
+        // only identifier there is, so it doubles as both fields.
+        gameUid = username;
         gameUsername = username;
       } else {
         const selected = accounts.find((a) => a.id === selectedAccountId);
         if (!selected) {
-          setError("Select or add a Game UID to continue.");
+          setError("Enter your in-game name to continue.");
           setBusy(false);
           return;
         }
@@ -141,7 +140,7 @@ export function RegistrationFlow({
         orderId: order.orderId,
         amount: order.amount,
         currency: order.currency,
-        name: "Tourney",
+        name: "ArenaroadX",
         description: tournament.name,
         prefill: { name: user?.name, email: user?.email, contact: user?.phone },
       });
@@ -172,8 +171,8 @@ export function RegistrationFlow({
       {step === "account" ? (
         <div className="space-y-4">
           <p className="text-sm text-gray-500">
-            Select the {game.name} account to link with this registration. Match results are matched
-            by this Game UID, so double-check it before continuing.
+            Enter the in-game name you'll use for {game.name} — match results are matched by this
+            name, so double-check it before continuing.
           </p>
 
           {accounts.length > 0 ? (
@@ -192,7 +191,6 @@ export function RegistrationFlow({
                   />
                   <div>
                     <p className="text-sm font-semibold text-gray-800">{a.gameUsername}</p>
-                    <p className="text-xs text-gray-400">UID: {a.gameUid}</p>
                   </div>
                   {a.verifiedAt ? (
                     <ShieldCheck size={16} className="ml-auto text-success-500" />
@@ -207,21 +205,13 @@ export function RegistrationFlow({
           )}
 
           <div className="rounded-xl border border-dashed border-gray-200 p-3">
-            <p className="text-xs font-semibold text-gray-500">Or use a different Game UID</p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <input
-                value={newUid}
-                onChange={(e) => setNewUid(e.target.value)}
-                placeholder="Game UID"
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
-              />
-              <input
-                value={newUsername}
-                onChange={(e) => setNewUsername(e.target.value)}
-                placeholder="In-game name"
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
-              />
-            </div>
+            <p className="text-xs font-semibold text-gray-500">Or use a different in-game name</p>
+            <input
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              placeholder="In-game name"
+              className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
+            />
           </div>
 
           {error ? <p className="text-xs font-medium text-danger-600">{error}</p> : null}

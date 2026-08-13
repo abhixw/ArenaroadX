@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { ExternalLink, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -54,10 +54,13 @@ export function AdminOverviewTab({
   const [description, setDescription] = useState(tournament.description);
   const [gameId, setGameId] = useState(tournament.gameId);
   const [entryFee, setEntryFee] = useState(String(tournament.fee));
-  const [prizePool, setPrizePool] = useState(String(tournament.prizePool));
+  const [firstPrize, setFirstPrize] = useState(String(tournament.firstPrize ?? 0));
+  const [secondPrize, setSecondPrize] = useState(String(tournament.secondPrize ?? 0));
+  const prizePool = (Number(firstPrize) || 0) + (Number(secondPrize) || 0);
   const [maxPlayers, setMaxPlayers] = useState(String(tournament.maxPlayers));
   const [startTime, setStartTime] = useState(toLocalInput(tournament.startsAt));
   const [registrationDeadline, setRegistrationDeadline] = useState(toLocalInput(tournament.registrationClosesAt));
+  const [gameUrl, setGameUrl] = useState(tournament.gameUrl ?? "");
   const [rules, setRules] = useState(tournament.rules.join("\n"));
   const [instructions, setInstructions] = useState(tournament.scoringSummary);
   const [saved, setSaved] = useState(false);
@@ -75,10 +78,13 @@ export function AdminOverviewTab({
         name,
         description,
         entryFee: Number(entryFee),
-        prizePool: Number(prizePool),
+        prizePool,
+        firstPrize: Number(firstPrize) || 0,
+        secondPrize: Number(secondPrize) || 0,
         maxPlayers: Number(maxPlayers),
         startTime: new Date(startTime).toISOString(),
         registrationDeadline: new Date(registrationDeadline).toISOString(),
+        gameUrl: gameUrl.trim(),
         rules,
         instructions,
       });
@@ -145,7 +151,7 @@ export function AdminOverviewTab({
             className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
           />
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs font-semibold text-gray-500">Entry Fee (₹)</label>
             <input
@@ -153,16 +159,6 @@ export function AdminOverviewTab({
               min={0}
               value={entryFee}
               onChange={(e) => setEntryFee(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-500">Prize Pool (₹)</label>
-            <input
-              type="number"
-              min={0}
-              value={prizePool}
-              onChange={(e) => setPrizePool(e.target.value)}
               className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
             />
           </div>
@@ -177,6 +173,31 @@ export function AdminOverviewTab({
             />
           </div>
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-semibold text-gray-500">1st Prize (₹)</label>
+            <input
+              type="number"
+              min={0}
+              value={firstPrize}
+              onChange={(e) => setFirstPrize(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500">2nd Prize (₹)</label>
+            <input
+              type="number"
+              min={0}
+              value={secondPrize}
+              onChange={(e) => setSecondPrize(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
+            />
+          </div>
+        </div>
+        <p className="text-right text-xs font-semibold text-gray-500">
+          Prize Pool: ₹{prizePool.toLocaleString("en-IN")}
+        </p>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs font-semibold text-gray-500">Registration Deadline</label>
@@ -196,6 +217,16 @@ export function AdminOverviewTab({
               className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
             />
           </div>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-gray-500">Website Link</label>
+          <input
+            type="url"
+            value={gameUrl}
+            onChange={(e) => setGameUrl(e.target.value)}
+            placeholder="https://..."
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
+          />
         </div>
         <div>
           <label className="text-xs font-semibold text-gray-500">Rules (one per line)</label>
@@ -226,6 +257,13 @@ export function AdminOverviewTab({
         <p className="text-xs text-gray-400">
           Current status: <span className="font-semibold text-gray-600">{tournament.status}</span>
         </p>
+        {tournament.gameUrl ? (
+          <a href={tournament.gameUrl} target="_blank" rel="noreferrer">
+            <Button variant="outline" className="w-full gap-2">
+              Visit Website <ExternalLink size={14} />
+            </Button>
+          </a>
+        ) : null}
         <div className="space-y-2">
           {nextActions.map((a) => (
             <Button

@@ -42,7 +42,7 @@ export default function Profile() {
   async function handleSave() {
     setBusy(true);
     try {
-      await updateProfile({ name, phone });
+      await updateProfile({ name, phone: phone.replace(/[\s-]/g, "") });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } finally {

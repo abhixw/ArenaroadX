@@ -43,12 +43,14 @@ export default function Tournaments() {
   const { data: games } = useAsyncData(getGames);
 
   useEffect(() => {
-    const searchFromUrl = searchParams.get("search");
+    const searchFromUrl = searchParams.get("search") ?? "";
     const gameFromUrl = searchParams.get("game");
-    if (searchFromUrl && searchFromUrl !== query) setQuery(searchFromUrl);
+    setQuery(searchFromUrl);
     if (gameFromUrl) setGameFilter(gameFromUrl);
+    // Re-sync whenever the URL's search param changes (e.g. a new search from the top bar
+    // while already on this page), not just on first mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   const gameMap = useMemo(() => new Map((games ?? []).map((g) => [g.id, g])), [games]);
 

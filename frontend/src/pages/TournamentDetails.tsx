@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { CalendarDays, Clock, Coins, Trophy, Users } from "lucide-react";
+import { CalendarDays, Clock, Coins, ExternalLink, Trophy, Users } from "lucide-react";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -8,22 +8,16 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { Thumb } from "@/components/ui/Thumb";
 import { TournamentStatusBadge } from "@/components/ui/Badge";
 import { LeaderboardTable } from "@/components/leaderboard/LeaderboardTable";
-import { RoomAccessCard } from "@/components/tournaments/RoomAccessCard";
 import { RegistrationFlow } from "@/components/tournaments/RegistrationFlow";
 import { useAuth } from "@/hooks/useAuth";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { getTournament, getMatches, getMatchAccess } from "@/api/tournaments";
+import { getTournament } from "@/api/tournaments";
 import { getGame } from "@/api/games";
 import { getRegistrationForTournament } from "@/api/registrations";
 import { getLeaderboard } from "@/api/results";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 
 const PUBLISHED_STATUSES = ["RESULTS_PUBLISHED", "COMPLETED"];
-
-function isWithinJoinWindow(opensAt: string, closesAt: string): boolean {
-  const now = Date.now();
-  return now >= new Date(opensAt).getTime() && now <= new Date(closesAt).getTime();
-}
 
 export default function TournamentDetails() {
   const { id } = useParams<{ id: string }>();
@@ -35,10 +29,6 @@ export default function TournamentDetails() {
     [id],
   );
   const { data: game } = useAsyncData(() => getGame(tournament?.gameId ?? ""), [tournament?.gameId]);
-  const { data: matches } = useAsyncData(
-    () => getMatches(id!, tournament?.gameUrl),
-    [id, tournament?.gameUrl],
-  );
   const {
     data: registration,
     refetch: refetchRegistration,
@@ -50,20 +40,6 @@ export default function TournamentDetails() {
 
   const isConfirmed = registration?.status === "CONFIRMED";
   const isReserved = registration?.status === "RESERVED";
-  const liveMatch = matches?.find(
-    (m) => m.status === "LIVE" || isWithinJoinWindow(m.joinWindowOpensAt, m.joinWindowClosesAt),
-  );
-
-  // Room credentials are participant-gated server-side -- only fetch once confirmed, and
-  // treat any failure (not open yet / not a participant) as "nothing to show" rather than
-  // a hard error, since RoomAccessCard already renders a graceful placeholder for that.
-  const { data: matchAccess } = useAsyncData(
-    () =>
-      isConfirmed && liveMatch
-        ? getMatchAccess(id!, liveMatch.id).catch(() => null)
-        : Promise.resolve(null),
-    [id, isConfirmed, liveMatch?.id],
-  );
 
   if (!loading && !tournament) {
     return <Navigate to="/tournaments" replace />;
@@ -79,14 +55,6 @@ export default function TournamentDetails() {
     );
   }
 
-  const roomMatch = liveMatch
-    ? {
-        ...liveMatch,
-        roomId: matchAccess?.roomId ?? undefined,
-        roomPassword: matchAccess?.roomPassword ?? undefined,
-      }
-    : undefined;
-
   function refreshAll() {
     refetchTournament();
     refetchRegistration();
@@ -97,7 +65,13 @@ export default function TournamentDetails() {
       <Topbar title={tournament.name} subtitle={game.name} />
 
       <Card className="overflow-hidden">
-        <Thumb src={tournament.imageUrl} alt={tournament.name} className="h-56 w-full" />
+        <div className="flex justify-center bg-app-bg p-5">
+          <Thumb
+            src={tournament.imageUrl}
+            alt={tournament.name}
+            className="aspect-video w-full max-w-xs rounded-xl"
+          />
+        </div>
         <div className="p-5">
           <div className="flex flex-wrap items-center gap-2">
             <TournamentStatusBadge status={tournament.status} />
@@ -111,7 +85,14 @@ export default function TournamentDetails() {
         <div className="space-y-6 lg:col-span-2">
           <Card className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
             <InfoStat icon={Coins} label="Entry Fee" value={formatCurrency(tournament.fee)} />
-            <InfoStat icon={Trophy} label="Prize Pool" value={formatCurrency(tournament.prizePool)} />
+            {tournament.firstPrize || tournament.secondPrize ? (
+              <>
+                <InfoStat icon={Trophy} label="1st Prize" value={formatCurrency(tournament.firstPrize ?? 0)} />
+                <InfoStat icon={Trophy} label="2nd Prize" value={formatCurrency(tournament.secondPrize ?? 0)} />
+              </>
+            ) : (
+              <InfoStat icon={Trophy} label="Prize Pool" value={formatCurrency(tournament.prizePool)} />
+            )}
             <InfoStat
               icon={Users}
               label="Players"
@@ -193,15 +174,26 @@ export default function TournamentDetails() {
                 Complete Payment
               </Button>
             ) : null}
+            {tournament.gameUrl ? (
+              <a href={tournament.gameUrl} target="_blank" rel="noreferrer" className="mt-3 block">
+                <Button variant="outline" className="w-full gap-2">
+                  Visit Website <ExternalLink size={14} />
+                </Button>
+              </a>
+            ) : null}
           </Card>
-
-          {isConfirmed && roomMatch ? <RoomAccessCard match={roomMatch} /> : null}
         </div>
       </div>
 
       <RegistrationFlow
         open={flowOpen}
-        onClose={() => setFlowOpen(false)}
+        onClose={() => {
+          setFlowOpen(false);
+          // Closing without finishing payment can still have created a PENDING_PAYMENT
+          // reservation server-side (registration succeeds before the payment step) -- refetch
+          // so "Register Now" correctly becomes "Complete Payment" instead of going stale.
+          refetchRegistration();
+        }}
         onSuccess={refreshAll}
         tournament={tournament}
         game={game}

@@ -56,6 +56,8 @@ export interface Tournament {
   gameUrl?: string | null;
   fee: number;
   prizePool: number;
+  firstPrize?: number | null;
+  secondPrize?: number | null;
   maxPlayers: number;
   registeredPlayers: number;
   status: TournamentStatus;
@@ -148,12 +150,4 @@ export interface Prize {
 export interface PerformancePoint {
   month: string;
   score: number;
-}
-
-export interface Notification {
-  id: string;
-  title: string;
-  body: string;
-  createdAt: string;
-  read: boolean;
 }

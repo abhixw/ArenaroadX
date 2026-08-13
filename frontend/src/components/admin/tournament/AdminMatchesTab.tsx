@@ -72,7 +72,7 @@ export function AdminMatchesTab({ tournament }: { tournament: Tournament }) {
           <EmptyState
             icon={CalendarDays}
             title="No matches yet"
-            description="Add a match once you're ready to configure room access for confirmed participants."
+            description="Add a match before entering results for this tournament."
           />
         ) : (
           (matches ?? [])
@@ -85,12 +85,6 @@ export function AdminMatchesTab({ tournament }: { tournament: Tournament }) {
                     <p className="text-xs text-gray-400">{formatDateTime(m.scheduledAt)}</p>
                   </div>
                   <Badge tone={STATUS_TONE[m.status]}>{m.status}</Badge>
-                </div>
-                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-500 sm:grid-cols-4">
-                  <span>Opens: {formatDateTime(m.joinWindowOpensAt)}</span>
-                  <span>Closes: {formatDateTime(m.joinWindowClosesAt)}</span>
-                  <span>Room: {m.roomId || "—"}</span>
-                  <span>Password: {m.roomPassword || "—"}</span>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button variant="outline" size="sm" onClick={() => setEditingMatch(m)}>
@@ -172,28 +166,25 @@ function MatchModal({
 }) {
   const [matchNumber, setMatchNumber] = useState(String(match?.matchNumber ?? nextMatchNumber ?? 1));
   const [scheduledTime, setScheduledTime] = useState(match ? toLocalInput(match.scheduledAt) : "");
-  const [joinOpens, setJoinOpens] = useState(match ? toLocalInput(match.joinWindowOpensAt) : "");
-  const [joinCloses, setJoinCloses] = useState(match ? toLocalInput(match.joinWindowClosesAt) : "");
-  const [roomId, setRoomId] = useState(match?.roomId ?? "");
-  const [roomPassword, setRoomPassword] = useState(match?.roomPassword ?? "");
-  const [accessInfo, setAccessInfo] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function handleSave() {
-    if (!scheduledTime || !joinOpens || !joinCloses) {
-      setError("Scheduled time and join window are required.");
+    if (!scheduledTime) {
+      setError("Scheduled time is required.");
       return;
     }
     setBusy(true);
     setError(null);
+    const scheduled = new Date(scheduledTime);
+    // No private room/join-window gating in this platform's manual-results workflow --
+    // players just use the tournament's "Visit Website" link. A generous window around the
+    // scheduled time is enough to satisfy the backend's required fields without asking the
+    // admin to fill in room credentials that will never be used.
     const input: Partial<MatchInput> = {
-      scheduledTime: new Date(scheduledTime).toISOString(),
-      joinWindowOpensAt: new Date(joinOpens).toISOString(),
-      joinWindowClosesAt: new Date(joinCloses).toISOString(),
-      roomId,
-      roomPassword,
-      accessInfo,
+      scheduledTime: scheduled.toISOString(),
+      joinWindowOpensAt: new Date(scheduled.getTime() - 15 * 60 * 1000).toISOString(),
+      joinWindowClosesAt: new Date(scheduled.getTime() + 6 * 60 * 60 * 1000).toISOString(),
     };
     try {
       if (match) {
@@ -230,53 +221,6 @@ function MatchModal({
             type="datetime-local"
             value={scheduledTime}
             onChange={(e) => setScheduledTime(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-xs font-semibold text-gray-500">Join Window Opens</label>
-            <input
-              type="datetime-local"
-              value={joinOpens}
-              onChange={(e) => setJoinOpens(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-500">Join Window Closes</label>
-            <input
-              type="datetime-local"
-              value={joinCloses}
-              onChange={(e) => setJoinCloses(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-xs font-semibold text-gray-500">Room ID</label>
-            <input
-              value={roomId}
-              onChange={(e) => setRoomId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-500">Room Password</label>
-            <input
-              value={roomPassword}
-              onChange={(e) => setRoomPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-gray-500">Access Info</label>
-          <input
-            value={accessInfo}
-            onChange={(e) => setAccessInfo(e.target.value)}
-            placeholder="e.g. Join 15 minutes before start."
             className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
           />
         </div>

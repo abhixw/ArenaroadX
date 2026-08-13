@@ -3,18 +3,25 @@ import logging
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, Request, Response, status
 
-from app.core.dependencies import require_user
+from app.core.dependencies import require_admin, require_user
 from app.core.exceptions import UnauthorizedError
 from app.core.rate_limit import rate_limit
 from app.models.payment import Payment
 from app.models.user import User, UserRole
 from app.schemas.common import DataResponse, ListResponse
-from app.schemas.payment import CreateOrderRequest, CreateOrderResponse, PaymentResponse, VerifyPaymentRequest
+from app.schemas.payment import (
+    AdminPaymentResponse,
+    CreateOrderRequest,
+    CreateOrderResponse,
+    PaymentResponse,
+    VerifyPaymentRequest,
+)
 from app.services import payment_service
 
 logger = logging.getLogger("tournament_backend.webhooks")
 
 router = APIRouter(prefix="/api/payments", tags=["payments"])
+admin_router = APIRouter(prefix="/api/admin/payments", tags=["admin:payments"], dependencies=[Depends(require_admin)])
 webhook_router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
 
 
@@ -62,6 +69,12 @@ async def verify_payment(
 async def list_my_payments(current_user: User = Depends(require_user)) -> ListResponse[PaymentResponse]:
     payments = await payment_service.list_my_payments(current_user.id)
     return ListResponse(data=[PaymentResponse.model_validate(p, from_attributes=True) for p in payments])
+
+
+@admin_router.get("", response_model=ListResponse[AdminPaymentResponse], summary="List every payment (admin only)")
+async def list_all_payments() -> ListResponse[AdminPaymentResponse]:
+    payments = await payment_service.list_all_payments()
+    return ListResponse(data=payments)
 
 
 @router.get("/{payment_id}", response_model=DataResponse[PaymentResponse], summary="Get a payment by id")

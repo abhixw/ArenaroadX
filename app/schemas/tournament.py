@@ -21,6 +21,8 @@ class TournamentCreate(BaseModel):
     description: str | None = None
     entry_fee: Decimal = Field(ge=0)
     prize_pool: Decimal = Field(ge=0)
+    first_prize: Decimal | None = Field(default=None, ge=0)
+    second_prize: Decimal | None = Field(default=None, ge=0)
     max_players: int = Field(gt=0)
     start_time: datetime
     registration_deadline: datetime
@@ -61,6 +63,8 @@ class TournamentUpdate(BaseModel):
     description: str | None = None
     entry_fee: Decimal | None = Field(default=None, ge=0)
     prize_pool: Decimal | None = Field(default=None, ge=0)
+    first_prize: Decimal | None = Field(default=None, ge=0)
+    second_prize: Decimal | None = Field(default=None, ge=0)
     max_players: int | None = Field(default=None, gt=0)
     start_time: datetime | None = None
     registration_deadline: datetime | None = None
@@ -122,6 +126,8 @@ class TournamentResponse(BaseModel):
     description: str | None
     entry_fee: Decimal
     prize_pool: Decimal
+    first_prize: Decimal | None = None
+    second_prize: Decimal | None = None
     max_players: int
     # Confirmed + still-reserved (unpaid) registrations -- how full the tournament actually
     # is right now. Mirrors Tournament.reserved_slots (see that field's docstring).

@@ -56,7 +56,7 @@ export function AdminLayout() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-500 text-white">
             <Shield size={16} fill="currentColor" />
           </div>
-          <span className="text-base font-extrabold text-gray-900">Tourney Admin</span>
+          <span className="text-base font-extrabold text-gray-900">ArenaroadX Admin</span>
         </div>
 
         <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 lg:py-8">

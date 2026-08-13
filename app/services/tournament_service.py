@@ -34,6 +34,14 @@ def _to_rupees(paise: int) -> Decimal:
     return Decimal(paise) / _PAISE_PER_RUPEE
 
 
+def _to_rupees_optional(paise: int | None) -> Decimal | None:
+    return _to_rupees(paise) if paise is not None else None
+
+
+def _to_paise_optional(rupees: Decimal | None) -> int | None:
+    return _to_paise(rupees) if rupees is not None else None
+
+
 def to_response(tournament: Tournament) -> TournamentResponse:
     return TournamentResponse(
         id=tournament.id,
@@ -42,6 +50,8 @@ def to_response(tournament: Tournament) -> TournamentResponse:
         description=tournament.description,
         entry_fee=_to_rupees(tournament.entry_fee_paise),
         prize_pool=_to_rupees(tournament.prize_pool_paise),
+        first_prize=_to_rupees_optional(tournament.first_prize_paise),
+        second_prize=_to_rupees_optional(tournament.second_prize_paise),
         max_players=tournament.max_players,
         registered_players=tournament.reserved_slots,
         start_time=tournament.start_time,
@@ -78,9 +88,11 @@ async def create_tournament(payload: TournamentCreate) -> Tournament:
     if game is None:
         raise GameNotFoundError()
 
-    data = payload.model_dump(exclude={"entry_fee", "prize_pool", "game_url"})
+    data = payload.model_dump(exclude={"entry_fee", "prize_pool", "first_prize", "second_prize", "game_url"})
     data["entry_fee_paise"] = _to_paise(payload.entry_fee)
     data["prize_pool_paise"] = _to_paise(payload.prize_pool)
+    data["first_prize_paise"] = _to_paise_optional(payload.first_prize)
+    data["second_prize_paise"] = _to_paise_optional(payload.second_prize)
     data["game_url"] = str(payload.game_url) if payload.game_url else None
 
     return await tournament_repository.create(**data)
@@ -100,7 +112,9 @@ def _apply_status_transition(tournament: Tournament, target_status: TournamentSt
 async def update_tournament(tournament_id: PydanticObjectId, payload: TournamentUpdate) -> Tournament:
     tournament = await get_tournament(tournament_id)
 
-    updates = payload.model_dump(exclude_unset=True, exclude={"status", "entry_fee", "prize_pool", "game_url"})
+    updates = payload.model_dump(
+        exclude_unset=True, exclude={"status", "entry_fee", "prize_pool", "first_prize", "second_prize", "game_url"}
+    )
 
     if "game_id" in updates:
         game = await game_repository.get_by_id(updates["game_id"])
@@ -111,6 +125,10 @@ async def update_tournament(tournament_id: PydanticObjectId, payload: Tournament
         updates["entry_fee_paise"] = _to_paise(payload.entry_fee)
     if payload.prize_pool is not None:
         updates["prize_pool_paise"] = _to_paise(payload.prize_pool)
+    if "first_prize" in payload.model_fields_set:
+        updates["first_prize_paise"] = _to_paise_optional(payload.first_prize)
+    if "second_prize" in payload.model_fields_set:
+        updates["second_prize_paise"] = _to_paise_optional(payload.second_prize)
     if "game_url" in payload.model_fields_set:
         updates["game_url"] = str(payload.game_url) if payload.game_url else None
 
