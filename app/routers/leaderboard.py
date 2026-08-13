@@ -3,9 +3,9 @@ from fastapi import APIRouter, Depends
 
 from app.core.dependencies import require_user
 from app.models.user import User
-from app.repositories import tournament_repository, user_repository
+from app.repositories import tournament_repository
 from app.schemas.common import DataResponse, ListResponse
-from app.schemas.result import LeaderboardEntry, LeaderboardResponse, UserLeaderboardHistoryEntry
+from app.schemas.result import LeaderboardResponse, UserLeaderboardHistoryEntry
 from app.services import leaderboard_service
 
 router = APIRouter(prefix="/api/tournaments", tags=["leaderboard"])
@@ -19,13 +19,7 @@ users_router = APIRouter(prefix="/api/users", tags=["leaderboard"])
     dependencies=[Depends(require_user)],
 )
 async def get_tournament_leaderboard(tournament_id: PydanticObjectId) -> DataResponse[LeaderboardResponse]:
-    results = await leaderboard_service.get_tournament_leaderboard(tournament_id)
-    entries = []
-    for r in results:
-        user = await user_repository.get_by_id(r.user_id)
-        entries.append(
-            LeaderboardEntry(rank=r.rank or 0, user_id=r.user_id, player_name=user.name if user else "", score=r.total_score)
-        )
+    entries = await leaderboard_service.get_tournament_leaderboard_entries(tournament_id)
     return DataResponse(data=LeaderboardResponse(tournament_id=tournament_id, entries=entries))
 
 

@@ -43,6 +43,7 @@ def to_response(tournament: Tournament) -> TournamentResponse:
         entry_fee=_to_rupees(tournament.entry_fee_paise),
         prize_pool=_to_rupees(tournament.prize_pool_paise),
         max_players=tournament.max_players,
+        registered_players=tournament.reserved_slots,
         start_time=tournament.start_time,
         registration_deadline=tournament.registration_deadline,
         game_url=tournament.game_url,
@@ -143,6 +144,10 @@ async def open_registration(tournament_id: PydanticObjectId) -> Tournament:
 
 async def close_registration(tournament_id: PydanticObjectId) -> Tournament:
     return await transition_status(tournament_id, TournamentStatus.REGISTRATION_CLOSED)
+
+
+async def mark_ready(tournament_id: PydanticObjectId) -> Tournament:
+    return await transition_status(tournament_id, TournamentStatus.READY)
 
 
 async def start_tournament(tournament_id: PydanticObjectId) -> Tournament:

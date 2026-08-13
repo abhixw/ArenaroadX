@@ -33,3 +33,17 @@ async def upsert_game_account(
 async def list_my_game_accounts(current_user: User = Depends(require_user)) -> ListResponse[GameAccountResponse]:
     accounts = await game_account_service.list_my_game_accounts(current_user.id)
     return ListResponse(data=[GameAccountResponse.model_validate(a, from_attributes=True) for a in accounts])
+
+
+@my_accounts_router.post(
+    "/{game_id}",
+    response_model=DataResponse[GameAccountResponse],
+    summary="Create or update the game account (Game UID) for a game, outside of a specific tournament's flow",
+)
+async def upsert_my_game_account(
+    game_id: PydanticObjectId,
+    payload: GameAccountUpsert,
+    current_user: User = Depends(require_user),
+) -> DataResponse[GameAccountResponse]:
+    account = await game_account_service.upsert_for_game(user_id=current_user.id, game_id=game_id, payload=payload)
+    return DataResponse(data=GameAccountResponse.model_validate(account, from_attributes=True))

@@ -34,6 +34,7 @@ class MyTournamentResponse(BaseModel):
 
 
 class ParticipantResponse(BaseModel):
+    registration_id: PydanticObjectId
     user_id: PydanticObjectId
     name: str
     email: str

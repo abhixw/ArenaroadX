@@ -76,6 +76,16 @@ async def enter_match_result(
     return DataResponse(data=MatchResultResponse.model_validate(result, from_attributes=True))
 
 
+@admin_matches_router.get(
+    "/{match_id}/results",
+    response_model=ListResponse[MatchResultResponse],
+    summary="List raw match results entered/imported for a match so far (admin only)",
+)
+async def list_match_results(match_id: PydanticObjectId) -> ListResponse[MatchResultResponse]:
+    results = await result_service.list_match_results(match_id)
+    return ListResponse(data=[MatchResultResponse.model_validate(r, from_attributes=True) for r in results])
+
+
 @admin_results_router.put(
     "/{match_result_id}",
     response_model=DataResponse[MatchResultResponse],

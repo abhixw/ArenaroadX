@@ -8,7 +8,7 @@ from app.core.exceptions import UnauthorizedError
 from app.core.rate_limit import rate_limit
 from app.models.payment import Payment
 from app.models.user import User, UserRole
-from app.schemas.common import DataResponse
+from app.schemas.common import DataResponse, ListResponse
 from app.schemas.payment import CreateOrderRequest, CreateOrderResponse, PaymentResponse, VerifyPaymentRequest
 from app.services import payment_service
 
@@ -56,6 +56,12 @@ async def verify_payment(
         razorpay_signature=payload.razorpay_signature,
     )
     return DataResponse(data=PaymentResponse.model_validate(payment, from_attributes=True))
+
+
+@router.get("", response_model=ListResponse[PaymentResponse], summary="List the current user's payments")
+async def list_my_payments(current_user: User = Depends(require_user)) -> ListResponse[PaymentResponse]:
+    payments = await payment_service.list_my_payments(current_user.id)
+    return ListResponse(data=[PaymentResponse.model_validate(p, from_attributes=True) for p in payments])
 
 
 @router.get("/{payment_id}", response_model=DataResponse[PaymentResponse], summary="Get a payment by id")

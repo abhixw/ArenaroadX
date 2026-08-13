@@ -87,6 +87,7 @@ async def list_tournament_participants(tournament_id: PydanticObjectId) -> ListR
         user = await user_repository.get_by_id(r.user_id)
         entries.append(
             ParticipantResponse(
+                registration_id=r.id,
                 user_id=r.user_id,
                 name=user.name if user else "",
                 email=user.email if user else "",

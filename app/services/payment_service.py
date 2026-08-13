@@ -139,6 +139,10 @@ async def verify_payment(
     return await _mark_captured(payment, razorpay_payment_id=razorpay_payment_id, razorpay_signature=razorpay_signature)
 
 
+async def list_my_payments(user_id: PydanticObjectId) -> list[Payment]:
+    return await payment_repository.list_by_user(user_id)
+
+
 async def get_payment(*, payment_id: PydanticObjectId, user_id: PydanticObjectId, is_admin: bool) -> Payment:
     payment = await payment_repository.get_by_id(payment_id)
     if payment is None:

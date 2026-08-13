@@ -105,6 +105,12 @@ class LeaderboardEntry(BaseModel):
     user_id: PydanticObjectId
     player_name: str
     score: float
+    # Only populated when the user has exactly one match result in this tournament -- with
+    # multiple matches there's no single placement/kills figure that represents the whole
+    # tournament, so these stay null rather than showing a misleading single match's stats.
+    game_uid: str | None = None
+    placement: int | None = None
+    kills: int | None = None
 
 
 class LeaderboardResponse(BaseModel):

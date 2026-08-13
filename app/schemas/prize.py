@@ -33,3 +33,17 @@ class PrizeResponse(BaseModel):
     paid_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+
+class MyPrizeResponse(BaseModel):
+    """PrizeResponse plus the tournament name, for the current user's cross-tournament
+    prize list -- mirrors UserLeaderboardHistoryEntry's join style."""
+
+    id: PydanticObjectId
+    tournament_id: PydanticObjectId
+    tournament_name: str
+    rank: int
+    amount: Decimal
+    payout_status: PrizePayoutStatus
+    paid_at: datetime | None
+    created_at: datetime

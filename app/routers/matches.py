@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, status
 from app.core.dependencies import require_admin, require_user
 from app.models.user import User
 from app.schemas.common import DataResponse, ListResponse
-from app.schemas.match import MatchAccessResponse, MatchCreate, MatchResponse, MatchUpdate
+from app.schemas.match import MatchAccessResponse, MatchAdminResponse, MatchCreate, MatchResponse, MatchUpdate
 from app.services import match_service
 
 router = APIRouter(prefix="/api/tournaments", tags=["matches"])
@@ -54,44 +54,54 @@ async def get_match_access(
     )
 
 
+@admin_tournament_router.get(
+    "/{tournament_id}/matches",
+    response_model=ListResponse[MatchAdminResponse],
+    summary="List matches for a tournament, including room credentials (admin only)",
+)
+async def list_matches_admin(tournament_id: PydanticObjectId) -> ListResponse[MatchAdminResponse]:
+    matches = await match_service.list_matches(tournament_id)
+    return ListResponse(data=[MatchAdminResponse.model_validate(m, from_attributes=True) for m in matches])
+
+
 @admin_tournament_router.post(
     "/{tournament_id}/matches",
-    response_model=DataResponse[MatchResponse],
+    response_model=DataResponse[MatchAdminResponse],
     status_code=status.HTTP_201_CREATED,
     summary="Create a match for a tournament (admin only; roster is auto-populated from confirmed registrations)",
 )
-async def create_match(tournament_id: PydanticObjectId, payload: MatchCreate) -> DataResponse[MatchResponse]:
+async def create_match(tournament_id: PydanticObjectId, payload: MatchCreate) -> DataResponse[MatchAdminResponse]:
     match = await match_service.create_match(tournament_id, payload)
-    return DataResponse(data=MatchResponse.model_validate(match, from_attributes=True))
+    return DataResponse(data=MatchAdminResponse.model_validate(match, from_attributes=True))
 
 
 @admin_matches_router.put(
-    "/{match_id}", response_model=DataResponse[MatchResponse], summary="Update a match (admin only)"
+    "/{match_id}", response_model=DataResponse[MatchAdminResponse], summary="Update a match (admin only)"
 )
-async def update_match(match_id: PydanticObjectId, payload: MatchUpdate) -> DataResponse[MatchResponse]:
+async def update_match(match_id: PydanticObjectId, payload: MatchUpdate) -> DataResponse[MatchAdminResponse]:
     match = await match_service.update_match(match_id, payload)
-    return DataResponse(data=MatchResponse.model_validate(match, from_attributes=True))
+    return DataResponse(data=MatchAdminResponse.model_validate(match, from_attributes=True))
 
 
 @admin_matches_router.post(
-    "/{match_id}/start", response_model=DataResponse[MatchResponse], summary="Mark a match LIVE (admin only)"
+    "/{match_id}/start", response_model=DataResponse[MatchAdminResponse], summary="Mark a match LIVE (admin only)"
 )
-async def start_match(match_id: PydanticObjectId) -> DataResponse[MatchResponse]:
+async def start_match(match_id: PydanticObjectId) -> DataResponse[MatchAdminResponse]:
     match = await match_service.start_match(match_id)
-    return DataResponse(data=MatchResponse.model_validate(match, from_attributes=True))
+    return DataResponse(data=MatchAdminResponse.model_validate(match, from_attributes=True))
 
 
 @admin_matches_router.post(
-    "/{match_id}/end", response_model=DataResponse[MatchResponse], summary="Mark a match COMPLETED (admin only)"
+    "/{match_id}/end", response_model=DataResponse[MatchAdminResponse], summary="Mark a match COMPLETED (admin only)"
 )
-async def end_match(match_id: PydanticObjectId) -> DataResponse[MatchResponse]:
+async def end_match(match_id: PydanticObjectId) -> DataResponse[MatchAdminResponse]:
     match = await match_service.end_match(match_id)
-    return DataResponse(data=MatchResponse.model_validate(match, from_attributes=True))
+    return DataResponse(data=MatchAdminResponse.model_validate(match, from_attributes=True))
 
 
 @admin_matches_router.post(
-    "/{match_id}/cancel", response_model=DataResponse[MatchResponse], summary="Cancel a match (admin only)"
+    "/{match_id}/cancel", response_model=DataResponse[MatchAdminResponse], summary="Cancel a match (admin only)"
 )
-async def cancel_match(match_id: PydanticObjectId) -> DataResponse[MatchResponse]:
+async def cancel_match(match_id: PydanticObjectId) -> DataResponse[MatchAdminResponse]:
     match = await match_service.cancel_match(match_id)
-    return DataResponse(data=MatchResponse.model_validate(match, from_attributes=True))
+    return DataResponse(data=MatchAdminResponse.model_validate(match, from_attributes=True))
