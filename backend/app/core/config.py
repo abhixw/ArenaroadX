@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     # CORS -- comma-separated list of allowed frontend origins
     CORS_ORIGINS: str = "http://localhost:5173"
 
+    # If set, ADMIN-role accounts may only log in from this exact origin (the admin
+    # frontend's deployed URL) -- an admin's credentials are rejected from the player
+    # site even if correct. Left blank, this check is disabled (e.g. local dev where
+    # both dashboards may legitimately share credentials during testing).
+    ADMIN_ORIGIN: str = ""
+
     # Razorpay
     RAZORPAY_KEY_ID: str = ""
     RAZORPAY_KEY_SECRET: str = ""

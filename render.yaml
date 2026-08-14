@@ -34,6 +34,10 @@ services:
       # projects, plus any custom domain). No trailing slashes.
       - key: CORS_ORIGINS
         sync: false
+      # The admin frontend's exact deployed origin -- admin credentials are rejected
+      # from any other origin (e.g. the player site), even if correct.
+      - key: ADMIN_ORIGIN
+        sync: false
       - key: RAZORPAY_KEY_ID
         sync: false
       - key: RAZORPAY_KEY_SECRET

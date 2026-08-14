@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 
 from app.core.config import settings
 from app.core.dependencies import get_current_user
+from app.core.exceptions import InvalidCredentialsError
 from app.core.rate_limit import rate_limit
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.auth import LoginRequest, RegisterRequest, UpdateProfileRequest
 from app.schemas.common import DataResponse
 from app.schemas.user import UserResponse
@@ -44,8 +45,14 @@ async def register(payload: RegisterRequest, response: Response) -> DataResponse
     summary="Log in and receive an HTTP-only session cookie",
     dependencies=[Depends(rate_limit("login", limit=10, window_seconds=60))],
 )
-async def login(payload: LoginRequest, response: Response) -> DataResponse[UserResponse]:
+async def login(payload: LoginRequest, request: Request, response: Response) -> DataResponse[UserResponse]:
     user = await auth_service.authenticate_user(payload)
+    if settings.ADMIN_ORIGIN and user.role == UserRole.ADMIN:
+        origin = request.headers.get("origin")
+        if origin != settings.ADMIN_ORIGIN:
+            # Same error as wrong credentials -- don't reveal that the password was
+            # actually correct but the origin wasn't the admin site.
+            raise InvalidCredentialsError()
     token = auth_service.issue_access_token(user)
     _set_auth_cookie(response, token)
     return DataResponse(data=UserResponse.model_validate(user, from_attributes=True))
