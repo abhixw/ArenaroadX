@@ -50,7 +50,10 @@ export default function AdminPlayerDetail() {
         <Skeleton className="h-96 w-full" />
       ) : (
         <>
-          <Topbar title={history.user.name} subtitle={history.user.email} />
+          <Topbar
+            title={history.user.name}
+            subtitle={history.user.phone ? `${history.user.email} · ${history.user.phone}` : history.user.email}
+          />
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <Card className="p-5 lg:col-span-2">

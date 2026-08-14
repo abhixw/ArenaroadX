@@ -44,11 +44,12 @@ export default function AdminPlayers() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px] text-sm">
+            <table className="w-full min-w-[700px] text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-app-bg/60 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
                   <th className="px-5 py-3">Name</th>
                   <th className="px-5 py-3">Email</th>
+                  <th className="px-5 py-3">Phone</th>
                   <th className="px-5 py-3">Status</th>
                   <th className="px-5 py-3">Joined</th>
                 </tr>
@@ -62,6 +63,7 @@ export default function AdminPlayers() {
                       </Link>
                     </td>
                     <td className="px-5 py-3.5 text-gray-500">{u.email}</td>
+                    <td className="px-5 py-3.5 text-gray-500">{u.phone ?? "—"}</td>
                     <td className="px-5 py-3.5">
                       <Badge tone={u.status === "ACTIVE" ? "success" : u.status === "SUSPENDED" ? "warning" : "danger"}>
                         {u.status}
