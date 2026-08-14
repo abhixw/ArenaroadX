@@ -19,6 +19,4 @@ htmlcov/
 .vscode/
 .idea/
 
-# Local project copy
-backend/
 .claude/

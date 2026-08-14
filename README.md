@@ -151,15 +151,21 @@ whichever hostnames you use.
 
 ## Project structure
 
+Two fully independent, separately deployable folders live side by side in this one repo, with
+shared project files (this README, `render.yaml`, `.gitignore`) at the repo root, outside both:
+
 ```
-app/
-  core/          config, database, security, auth dependencies, rate limiting, audit middleware
-  models/        Beanie documents (one per MongoDB collection)
-  schemas/       Pydantic request/response models
-  repositories/  MongoDB access, one module per collection
-  services/      business logic and orchestration
-  routers/       FastAPI routers (HTTP layer only)
-scripts/         create_admin, seed_games, seed_demo_tournament
+backend/
+  app/
+    core/          config, database, security, auth dependencies, rate limiting, audit middleware
+    models/        Beanie documents (one per MongoDB collection)
+    schemas/       Pydantic request/response models
+    repositories/  MongoDB access, one module per collection
+    services/      business logic and orchestration
+    routers/       FastAPI routers (HTTP layer only)
+  scripts/         create_admin, seed_games, seed_demo_tournament
+  tests/           pytest suite
+  requirements.txt, pytest.ini, .env.example
 frontend/
   src/pages/           player-facing pages
   src/pages/admin/     admin dashboard pages
@@ -167,6 +173,8 @@ frontend/
   src/api/             typed API client, one module per resource (src/api/admin/ for admin-only calls)
   src/contexts/        auth context/provider
   src/lib/             DTO<->frontend-type mappers, formatting helpers, Razorpay Checkout wrapper
+render.yaml            Render deployment blueprint for backend/
+README.md
 ```
 
 ## Local setup
@@ -176,6 +184,7 @@ frontend/
 1. Create a virtualenv and install dependencies:
 
    ```bash
+   cd backend
    python3.12 -m venv .venv
    .venv/bin/pip install -r requirements.txt
    ```
@@ -198,14 +207,14 @@ frontend/
    There are no schema migrations to run — Beanie creates indexes automatically at startup from each
    Document's `Settings.indexes`.
 
-4. Seed reference data (games) and create the initial admin account:
+4. Seed reference data (games) and create the initial admin account (run from `backend/`):
 
    ```bash
    .venv/bin/python -m scripts.seed_games
    .venv/bin/python -m scripts.create_admin
    ```
 
-5. Run the server:
+5. Run the server (from `backend/`):
 
    ```bash
    .venv/bin/uvicorn app.main:app --reload --host 127.0.0.1 --port 8010
