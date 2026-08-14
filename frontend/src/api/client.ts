@@ -32,7 +32,10 @@ interface RequestOptions {
 }
 
 function buildUrl(path: string, query?: Record<string, QueryValue>): string {
-  const url = new URL(API_URL.replace(/\/$/, "") + path);
+  // Second arg is only used when the first is relative -- if VITE_API_URL is empty (the
+  // production setup, proxied same-origin through Vercel to dodge cross-site cookie
+  // blocking), this resolves against the current page's own origin instead of throwing.
+  const url = new URL(API_URL.replace(/\/$/, "") + path, window.location.origin);
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
