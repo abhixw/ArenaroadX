@@ -1,0 +1,50 @@
+services:
+  - type: web
+    name: arenaroadx-backend
+    runtime: python
+    plan: free
+    rootDir: .
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.11
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: MONGODB_URL
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: tournament_platform
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+      # Cross-site cookie: frontend (Vercel) and backend (Render) are on different
+      # domains in production, unlike local dev -- SameSite=None + Secure is required
+      # for the auth cookie to be sent on cross-origin requests at all.
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE
+        value: none
+      # Comma-separated list of every deployed frontend origin (player + admin Vercel
+      # projects, plus any custom domain). No trailing slashes.
+      - key: CORS_ORIGINS
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: REGISTRATION_RESERVATION_MINUTES
+        value: "15"
+      - key: INITIAL_ADMIN_EMAIL
+        sync: false
+      - key: INITIAL_ADMIN_PASSWORD
+        sync: false
+      - key: INITIAL_ADMIN_NAME
+        value: ArenaRoadX Admin
