@@ -20,7 +20,10 @@ export function AppLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  if (user.role === "ADMIN") {
+  // Only bounce to /admin on the admin build -- on the player build, /admin doesn't
+  // exist (it redirects back to /), so doing this unconditionally would loop forever
+  // for any admin-role account that ends up logged in here.
+  if (user.role === "ADMIN" && import.meta.env.VITE_APP_MODE === "admin") {
     return <Navigate to="/admin" replace />;
   }
 
