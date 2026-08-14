@@ -43,15 +43,22 @@ export default function App() {
             <Route path="/profile" element={<Profile />} />
           </Route>
 
-          <Route element={<AdminLayout />}>
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/games" element={<AdminGames />} />
-            <Route path="/admin/tournaments" element={<AdminTournaments />} />
-            <Route path="/admin/tournaments/:id" element={<AdminTournamentDetail />} />
-            <Route path="/admin/players" element={<AdminPlayers />} />
-            <Route path="/admin/players/:id" element={<AdminPlayerDetail />} />
-            <Route path="/admin/payments" element={<AdminPayments />} />
-          </Route>
+          {import.meta.env.VITE_APP_MODE === "admin" ? (
+            <Route element={<AdminLayout />}>
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/games" element={<AdminGames />} />
+              <Route path="/admin/tournaments" element={<AdminTournaments />} />
+              <Route path="/admin/tournaments/:id" element={<AdminTournamentDetail />} />
+              <Route path="/admin/players" element={<AdminPlayers />} />
+              <Route path="/admin/players/:id" element={<AdminPlayerDetail />} />
+              <Route path="/admin/payments" element={<AdminPayments />} />
+            </Route>
+          ) : (
+            // Admin routes don't exist on the player build at all -- this isn't the
+            // intended admin entry point (that's the separate admin deployment), so
+            // don't even let a logged-in admin land here by mistake.
+            <Route path="/admin/*" element={<Navigate to="/" replace />} />
+          )}
 
           <Route path="*" element={<NotFound />} />
         </Routes>
