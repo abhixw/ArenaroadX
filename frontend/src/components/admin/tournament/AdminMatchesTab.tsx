@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { ApiError } from "@/api/client";
 import {
@@ -35,7 +36,10 @@ const STATUS_TONE: Record<Match["status"], "success" | "warning" | "gray" | "dan
 };
 
 export function AdminMatchesTab({ tournament }: { tournament: Tournament }) {
-  const { data: matches, loading, refetch } = useAsyncData(() => listMatches(tournament.id), [tournament.id]);
+  const { data: matches, loading, error: loadError, refetch } = useAsyncData(
+    () => listMatches(tournament.id),
+    [tournament.id],
+  );
   const [creating, setCreating] = useState(false);
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
@@ -66,7 +70,9 @@ export function AdminMatchesTab({ tournament }: { tournament: Tournament }) {
       {error ? <p className="mt-3 text-xs font-medium text-danger-600">{error}</p> : null}
 
       <div className="mt-4 space-y-3">
-        {loading ? (
+        {loadError ? (
+          <ErrorState message="Couldn't load matches." onRetry={refetch} />
+        ) : loading ? (
           <Skeleton className="h-20 w-full" />
         ) : (matches ?? []).length === 0 ? (
           <EmptyState

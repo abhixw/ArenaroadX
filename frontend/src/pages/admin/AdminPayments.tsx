@@ -4,6 +4,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Badge } from "@/components/ui/Badge";
 import { PageControls } from "@/components/ui/PageControls";
 import { useAsyncData } from "@/hooks/useAsyncData";
@@ -23,7 +24,7 @@ const PAGE_SIZE = 20;
 export default function AdminPayments() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const { data: result, loading } = useAsyncData(() => listAllPayments(page, PAGE_SIZE), [page]);
+  const { data: result, loading, error, refetch } = useAsyncData(() => listAllPayments(page, PAGE_SIZE), [page]);
 
   // Search only filters within the currently loaded page -- the payments list has no
   // server-side search (unlike players), so this stays a client-side page-local filter.
@@ -46,6 +47,7 @@ export default function AdminPayments() {
         <div className="relative">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
+            aria-label="Search by player, tournament, or order ID"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by player, tournament, or order ID..."
@@ -55,7 +57,11 @@ export default function AdminPayments() {
       </Card>
 
       <Card className="mt-4 p-0">
-        {loading ? (
+        {error ? (
+          <div className="p-5">
+            <ErrorState message="Couldn't load payments." onRetry={refetch} />
+          </div>
+        ) : loading ? (
           <div className="space-y-3 p-5">
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />

@@ -17,18 +17,18 @@ class TournamentCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     game_id: PydanticObjectId
-    name: str
-    description: str | None = None
+    name: str = Field(max_length=200)
+    description: str | None = Field(default=None, max_length=4000)
     entry_fee: Decimal = Field(ge=0)
     prize_pool: Decimal = Field(ge=0)
     first_prize: Decimal | None = Field(default=None, ge=0)
     second_prize: Decimal | None = Field(default=None, ge=0)
-    max_players: int = Field(gt=0)
+    max_players: int = Field(gt=0, le=100_000)
     start_time: datetime
     registration_deadline: datetime
     game_url: HttpUrl | None = None
-    rules: str | None = None
-    instructions: str | None = None
+    rules: str | None = Field(default=None, max_length=10_000)
+    instructions: str | None = Field(default=None, max_length=10_000)
 
     @field_validator("name")
     @classmethod
@@ -59,18 +59,18 @@ class TournamentUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     game_id: PydanticObjectId | None = None
-    name: str | None = None
-    description: str | None = None
+    name: str | None = Field(default=None, max_length=200)
+    description: str | None = Field(default=None, max_length=4000)
     entry_fee: Decimal | None = Field(default=None, ge=0)
     prize_pool: Decimal | None = Field(default=None, ge=0)
     first_prize: Decimal | None = Field(default=None, ge=0)
     second_prize: Decimal | None = Field(default=None, ge=0)
-    max_players: int | None = Field(default=None, gt=0)
+    max_players: int | None = Field(default=None, gt=0, le=100_000)
     start_time: datetime | None = None
     registration_deadline: datetime | None = None
     game_url: HttpUrl | None = None
-    rules: str | None = None
-    instructions: str | None = None
+    rules: str | None = Field(default=None, max_length=10_000)
+    instructions: str | None = Field(default=None, max_length=10_000)
     status: TournamentStatus | None = None
 
     @field_validator("name")
@@ -108,7 +108,7 @@ class TournamentUpdate(BaseModel):
 class CancelTournamentRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    reason: str
+    reason: str = Field(max_length=2000)
 
     @field_validator("reason")
     @classmethod

@@ -64,36 +64,6 @@ export interface ResultRevision {
   createdAt: string;
 }
 
-export type ImportStatus = "UPLOADED" | "VALIDATED" | "COMMITTED";
-export type ImportRowStatus = "VALID" | "INVALID" | "DUPLICATE" | "UNKNOWN";
-
-export interface ImportRowReport {
-  rowNumber: number;
-  gameUid: string | null;
-  placement: number | null;
-  kills: number | null;
-  rowStatus: ImportRowStatus;
-  reason: string | null;
-  userId: string | null;
-}
-
-export interface ResultImport {
-  id: string;
-  tournamentId: string;
-  matchId: string;
-  filename: string;
-  importedBy: string;
-  rowCount: number;
-  validCount: number;
-  invalidCount: number;
-  duplicateCount: number;
-  unknownCount: number;
-  missingGameUids: string[];
-  status: ImportStatus;
-  rows: ImportRowReport[];
-  createdAt: string;
-}
-
 export interface Participant {
   registrationId: string;
   userId: string;
@@ -146,15 +116,5 @@ export interface Transaction {
   amount: number;
   referenceId: string | null;
   note: string | null;
-  createdAt: string;
-}
-
-export interface AuditLogEntry {
-  id: string;
-  actorId: string | null;
-  action: string;
-  entity: string;
-  statusCode: number;
-  requestBody: Record<string, unknown> | null;
   createdAt: string;
 }

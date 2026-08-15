@@ -1,4 +1,5 @@
-fastapi==0.115.6
+fastapi==0.115.14
+starlette==0.46.2
 uvicorn[standard]==0.34.0
 # beanie 2.2.0/pydantic 2.10.4 don't support Python 3.14 (no wheels yet); these are the
 # nearest versions that do. Verified: `import app.main` succeeds, full requirements install
@@ -9,8 +10,8 @@ dnspython==2.8.0
 pydantic==2.13.4
 pydantic-settings==2.7.1
 email-validator==2.2.0
-python-dotenv==1.0.1
-pyjwt==2.10.1
+python-dotenv==1.2.2
+pyjwt==2.13.0
 passlib[argon2]==1.7.4
 argon2-cffi==23.1.0
 razorpay==1.4.2
@@ -21,3 +22,9 @@ pytest-asyncio==0.25.0
 
 # pinned: razorpay SDK still imports pkg_resources, removed in setuptools>=81
 setuptools<81
+
+# starlette (a FastAPI dependency) has known CVEs above 0.41.3 fixed only in 0.47.2+/1.x,
+# which need a FastAPI major-version jump this pin deliberately avoids for now -- upgrading
+# FastAPI across ~25 releases needs its own dedicated testing pass, not a pre-launch rush.
+# 0.46.2 is the newest version fastapi==0.115.14 allows (<0.47.0) and was verified against
+# the full test suite. Revisit both together as a follow-up.

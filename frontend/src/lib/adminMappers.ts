@@ -3,14 +3,11 @@
 // resources get their own mapper here.
 import { PAYMENT_STATUS_MAP, REGISTRATION_STATUS_MAP } from "@/lib/mappers";
 import type {
-  AuditLogEntry,
-  ImportRowReport,
   MatchResult,
   Participant,
   PlayerHistory,
   PlayerHistoryEntry,
   Refund,
-  ResultImport,
   ScoringRule,
   Transaction,
   TournamentResult,
@@ -177,62 +174,6 @@ export function mapTournamentResult(dto: TournamentResultDto): TournamentResult 
   };
 }
 
-// ---- result imports ----
-
-export interface ImportRowReportDto {
-  row_number: number;
-  game_uid: string | null;
-  placement: number | null;
-  kills: number | null;
-  row_status: ImportRowReport["rowStatus"];
-  reason: string | null;
-  user_id: string | null;
-}
-
-export interface ResultImportDto {
-  id: string;
-  tournament_id: string;
-  match_id: string;
-  filename: string;
-  imported_by: string;
-  row_count: number;
-  valid_count: number;
-  invalid_count: number;
-  duplicate_count: number;
-  unknown_count: number;
-  missing_game_uids: string[];
-  status: ResultImport["status"];
-  rows: ImportRowReportDto[];
-  created_at: string;
-}
-
-export function mapResultImport(dto: ResultImportDto): ResultImport {
-  return {
-    id: toId(dto.id),
-    tournamentId: toId(dto.tournament_id),
-    matchId: toId(dto.match_id),
-    filename: dto.filename,
-    importedBy: toId(dto.imported_by),
-    rowCount: dto.row_count,
-    validCount: dto.valid_count,
-    invalidCount: dto.invalid_count,
-    duplicateCount: dto.duplicate_count,
-    unknownCount: dto.unknown_count,
-    missingGameUids: dto.missing_game_uids,
-    status: dto.status,
-    rows: dto.rows.map((r) => ({
-      rowNumber: r.row_number,
-      gameUid: r.game_uid,
-      placement: r.placement,
-      kills: r.kills,
-      rowStatus: r.row_status,
-      reason: r.reason,
-      userId: r.user_id ? toId(r.user_id) : null,
-    })),
-    createdAt: dto.created_at,
-  };
-}
-
 // ---- participants ----
 
 export interface ParticipantDto {
@@ -371,30 +312,6 @@ export function mapTransaction(dto: TransactionDto): Transaction {
     amount: Number(dto.amount),
     referenceId: dto.reference_id ? toId(dto.reference_id) : null,
     note: dto.note,
-    createdAt: dto.created_at,
-  };
-}
-
-// ---- audit logs ----
-
-export interface AuditLogDto {
-  id: string;
-  actor_id: string | null;
-  action: string;
-  entity: string;
-  status_code: number;
-  request_body: Record<string, unknown> | null;
-  created_at: string;
-}
-
-export function mapAuditLog(dto: AuditLogDto): AuditLogEntry {
-  return {
-    id: toId(dto.id),
-    actorId: dto.actor_id ? toId(dto.actor_id) : null,
-    action: dto.action,
-    entity: dto.entity,
-    statusCode: dto.status_code,
-    requestBody: dto.request_body,
     createdAt: dto.created_at,
   };
 }

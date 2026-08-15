@@ -52,6 +52,7 @@ async def create_order(
     "/verify",
     response_model=DataResponse[PaymentResponse],
     summary="Verify a Razorpay payment signature and confirm the registration",
+    dependencies=[Depends(rate_limit("payment-verify", limit=10, window_seconds=60))],
 )
 async def verify_payment(
     payload: VerifyPaymentRequest, current_user: User = Depends(require_user)
@@ -94,7 +95,12 @@ async def razorpay_webhook(request: Request) -> Response:
     raw_body = await request.body()
     signature = request.headers.get("X-Razorpay-Signature", "")
 
-    if not signature or not payment_service.verify_webhook_signature(raw_body.decode("utf-8"), signature):
+    try:
+        raw_body_text = raw_body.decode("utf-8")
+    except UnicodeDecodeError:
+        raise UnauthorizedError("Invalid webhook signature.")
+
+    if not signature or not payment_service.verify_webhook_signature(raw_body_text, signature):
         raise UnauthorizedError("Invalid webhook signature.")
 
     payload = await request.json()

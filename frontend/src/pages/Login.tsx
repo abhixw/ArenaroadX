@@ -45,12 +45,13 @@ export default function Login() {
           <p className="text-lg font-bold text-gray-900">Welcome back</p>
           <p className="mt-1 text-sm text-gray-500">Log in to keep competing.</p>
 
-          <form onSubmit={onSubmit} className="mt-5 space-y-3">
+          <form onSubmit={onSubmit} className="mt-5 space-y-3" autoComplete="off">
             <div>
               <label className="text-xs font-semibold text-gray-500">Email</label>
               <input
                 type="email"
                 required
+                autoComplete="off"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
@@ -61,6 +62,7 @@ export default function Login() {
               <input
                 type="password"
                 required
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"

@@ -10,6 +10,7 @@ import { TournamentRow } from "@/components/dashboard/TournamentRow";
 import { Card } from "@/components/ui/Card";
 import { Tabs } from "@/components/ui/Tabs";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useAsyncData } from "@/hooks/useAsyncData";
@@ -32,7 +33,8 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [tab, setTab] = useState<MyTournamentTab>("ALL");
 
-  const { data: myTournaments, loading: loadingMine } = useAsyncData(getMyTournaments);
+  const { data: myTournaments, loading: loadingMine, error: myTournamentsError, refetch: refetchMine } =
+    useAsyncData(getMyTournaments);
   const { data: tournaments } = useAsyncData(getTournaments);
   const { data: games } = useAsyncData(getGames);
   const { data: nextMatch, loading: loadingNext } = useAsyncData(
@@ -103,7 +105,9 @@ export default function Dashboard() {
             </div>
 
             <div className="mt-4 space-y-3">
-              {loadingMine ? (
+              {myTournamentsError ? (
+                <ErrorState message="Couldn't load your tournaments." onRetry={refetchMine} />
+              ) : loadingMine ? (
                 <>
                   <Skeleton className="h-24 w-full" />
                   <Skeleton className="h-24 w-full" />

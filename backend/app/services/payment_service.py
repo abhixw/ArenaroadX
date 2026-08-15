@@ -2,6 +2,7 @@ import razorpay
 from beanie import PydanticObjectId
 
 from app.core.config import settings
+from app.core.database import session_client
 from app.core.exceptions import (
     ForbiddenError,
     PaymentNotFoundError,
@@ -69,25 +70,30 @@ async def _mark_captured(
     updates = {"status": PaymentStatus.CAPTURED, "razorpay_payment_id": razorpay_payment_id}
     if razorpay_signature is not None:
         updates["razorpay_signature"] = razorpay_signature
-    payment = await payment_repository.update(payment, **updates)
 
-    registration = await registration_repository.get_by_id(payment.registration_id)
-    if registration is not None and registration.registration_status != RegistrationStatus.CONFIRMED:
-        await registration_repository.update(
-            registration,
-            registration_status=RegistrationStatus.CONFIRMED,
-            payment_status=RegistrationPaymentStatus.CAPTURED,
-            payment_id=payment.id,
-        )
-        # Every entry fee payment is recorded in the financial ledger (spec section 18).
-        await transaction_repository.create(
-            tournament_id=payment.tournament_id,
-            user_id=payment.user_id,
-            type=TransactionType.ENTRY_FEE,
-            amount_paise=payment.amount_paise,
-            reference_id=payment.id,
-            note="Entry fee captured.",
-        )
+    async with session_client(Payment).start_session() as session:
+        async with await session.start_transaction():
+            payment = await payment_repository.update(payment, session=session, **updates)
+
+            registration = await registration_repository.get_by_id(payment.registration_id)
+            if registration is not None and registration.registration_status != RegistrationStatus.CONFIRMED:
+                await registration_repository.update(
+                    registration,
+                    registration_status=RegistrationStatus.CONFIRMED,
+                    payment_status=RegistrationPaymentStatus.CAPTURED,
+                    payment_id=payment.id,
+                    session=session,
+                )
+                # Every entry fee payment is recorded in the financial ledger (spec section 18).
+                await transaction_repository.create(
+                    tournament_id=payment.tournament_id,
+                    user_id=payment.user_id,
+                    type=TransactionType.ENTRY_FEE,
+                    amount_paise=payment.amount_paise,
+                    reference_id=payment.id,
+                    note="Entry fee captured.",
+                    session=session,
+                )
     return payment
 
 
@@ -95,16 +101,19 @@ async def _mark_failed_and_release_slot(payment: Payment) -> Payment:
     """Per spec: 'A payment failure ... releases the slot.' This is for Razorpay's
     authoritative payment.failed webhook event, not a client-side signature mismatch
     (which just means retry -- see verify_payment)."""
-    payment = await payment_repository.update(payment, status=PaymentStatus.FAILED)
+    async with session_client(Payment).start_session() as session:
+        async with await session.start_transaction():
+            payment = await payment_repository.update(payment, status=PaymentStatus.FAILED, session=session)
 
-    registration = await registration_repository.get_by_id(payment.registration_id)
-    if registration is not None and registration.registration_status == RegistrationStatus.PENDING_PAYMENT:
-        await registration_repository.update(
-            registration,
-            registration_status=RegistrationStatus.CANCELLED,
-            payment_status=RegistrationPaymentStatus.FAILED,
-        )
-        await registration_repository.release_slot(registration.tournament_id)
+            registration = await registration_repository.get_by_id(payment.registration_id)
+            if registration is not None and registration.registration_status == RegistrationStatus.PENDING_PAYMENT:
+                await registration_repository.update(
+                    registration,
+                    registration_status=RegistrationStatus.CANCELLED,
+                    payment_status=RegistrationPaymentStatus.FAILED,
+                    session=session,
+                )
+                await registration_repository.release_slot(registration.tournament_id, session=session)
     return payment
 
 

@@ -2,6 +2,7 @@ import { Receipt } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Badge } from "@/components/ui/Badge";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getLedger } from "@/api/admin/refunds";
@@ -17,7 +18,7 @@ const TYPE_TONE: Record<TransactionType, "success" | "danger" | "primary" | "gra
 };
 
 export function AdminLedgerTab({ tournament }: { tournament: Tournament }) {
-  const { data: transactions, loading } = useAsyncData(() => getLedger(tournament.id), [tournament.id]);
+  const { data: transactions, loading, error, refetch } = useAsyncData(() => getLedger(tournament.id), [tournament.id]);
 
   const total = (transactions ?? []).reduce((sum, t) => sum + t.amount, 0);
 
@@ -29,7 +30,9 @@ export function AdminLedgerTab({ tournament }: { tournament: Tournament }) {
       </div>
 
       <div className="mt-4">
-        {loading ? (
+        {error ? (
+          <ErrorState message="Couldn't load the ledger." onRetry={refetch} />
+        ) : loading ? (
           <Skeleton className="h-32 w-full" />
         ) : (transactions ?? []).length === 0 ? (
           <EmptyState icon={Receipt} title="No transactions yet" />

@@ -1,11 +1,12 @@
 from beanie import PydanticObjectId
+from pymongo.asynchronous.client_session import AsyncClientSession
 
 from app.models.transaction import Transaction
 
 
-async def create(**fields) -> Transaction:
+async def create(*, session: AsyncClientSession | None = None, **fields) -> Transaction:
     transaction = Transaction(**fields)
-    await transaction.insert()
+    await transaction.insert(session=session)
     return transaction
 
 

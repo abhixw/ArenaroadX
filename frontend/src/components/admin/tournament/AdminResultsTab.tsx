@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { ApiError } from "@/api/client";
 import { listMatches } from "@/api/admin/matches";
@@ -23,7 +24,7 @@ import type { MatchResult } from "@/types/admin";
 const PUBLISHED_STATUSES = ["RESULTS_PUBLISHED", "COMPLETED"];
 
 export function AdminResultsTab({ tournament }: { tournament: Tournament }) {
-  const { data: matches, loading: loadingMatches } = useAsyncData(
+  const { data: matches, loading: loadingMatches, error: matchesError } = useAsyncData(
     () => listMatches(tournament.id),
     [tournament.id],
   );
@@ -146,7 +147,11 @@ export function AdminResultsTab({ tournament }: { tournament: Tournament }) {
           ) : null}
         </div>
 
-        {loadingMatches ? (
+        {matchesError ? (
+          <div className="mt-4">
+            <ErrorState message="Couldn't load matches." />
+          </div>
+        ) : loadingMatches ? (
           <Skeleton className="mt-4 h-24 w-full" />
         ) : !matches || matches.length === 0 ? (
           <p className="mt-3 text-sm text-gray-400">Add a match first (Matches tab) before entering results.</p>
@@ -176,6 +181,14 @@ function ManualEntryForm({ matchId, onEntered }: { matchId: string; onEntered: (
   async function handleSubmit() {
     if (!gameUid.trim()) {
       setError("Game UID is required.");
+      return;
+    }
+    if (placement && Number(placement) < 1) {
+      setError("Placement must be 1 or greater.");
+      return;
+    }
+    if (kills && Number(kills) < 0) {
+      setError("Kills cannot be negative.");
       return;
     }
     setBusy(true);
@@ -209,6 +222,7 @@ function ManualEntryForm({ matchId, onEntered }: { matchId: string; onEntered: (
         />
         <input
           type="number"
+          min={1}
           value={placement}
           onChange={(e) => setPlacement(e.target.value)}
           placeholder="Placement"
@@ -216,6 +230,7 @@ function ManualEntryForm({ matchId, onEntered }: { matchId: string; onEntered: (
         />
         <input
           type="number"
+          min={0}
           value={kills}
           onChange={(e) => setKills(e.target.value)}
           placeholder="Kills"
@@ -283,6 +298,14 @@ function ResultRow({
   const [busy, setBusy] = useState(false);
 
   async function handleSave() {
+    if (placement && Number(placement) < 1) {
+      setError("Placement must be 1 or greater.");
+      return;
+    }
+    if (kills && Number(kills) < 0) {
+      setError("Kills cannot be negative.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -320,6 +343,7 @@ function ResultRow({
             <span className="text-xs text-gray-500">{result.gameUid}</span>
             <input
               type="number"
+              min={1}
               value={placement}
               onChange={(e) => setPlacement(e.target.value)}
               placeholder="Placement"
@@ -327,6 +351,7 @@ function ResultRow({
             />
             <input
               type="number"
+              min={0}
               value={kills}
               onChange={(e) => setKills(e.target.value)}
               placeholder="Kills"

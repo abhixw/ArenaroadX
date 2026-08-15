@@ -4,6 +4,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { PrizeStatusBadge } from "@/components/ui/Badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useAsyncData } from "@/hooks/useAsyncData";
@@ -12,7 +13,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 
 export default function Prizes() {
   const { user } = useAuth();
-  const { data: prizes, loading } = useAsyncData(
+  const { data: prizes, loading, error, refetch } = useAsyncData(
     () => (user ? getMyPrizes(user.id) : Promise.resolve([])),
     [user?.id],
   );
@@ -38,7 +39,9 @@ export default function Prizes() {
       </div>
 
       <Card className="p-5">
-        {loading ? (
+        {error ? (
+          <ErrorState message="Couldn't load your prizes." onRetry={refetch} />
+        ) : loading ? (
           <div className="space-y-3">
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-16 w-full" />

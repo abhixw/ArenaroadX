@@ -1,11 +1,9 @@
 import { http } from "@/api/client";
 import {
   mapMatchResult,
-  mapResultImport,
   mapScoringRule,
   mapTournamentResult,
   type MatchResultDto,
-  type ResultImportDto,
   type ScoringRuleDto,
   type TournamentResultDto,
 } from "@/lib/adminMappers";
@@ -134,46 +132,4 @@ export async function reviewResults(tournamentId: string): Promise<TournamentRes
 export async function publishResults(tournamentId: string): Promise<TournamentResult[]> {
   const dtos = await http.post<TournamentResultDto[]>(`/api/admin/tournaments/${tournamentId}/publish-results`);
   return dtos.map(mapTournamentResult);
-}
-
-// ---- CSV import ----
-
-// GET /api/admin/results/csv-template
-export function getCsvTemplateUrl(): string {
-  return `${(import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000"}/api/admin/results/csv-template`;
-}
-
-// POST /api/admin/matches/{id}/results/import (multipart)
-export async function uploadResultImport(matchId: string, file: File) {
-  const form = new FormData();
-  form.append("file", file);
-  const base = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000";
-  const response = await fetch(`${base}/api/admin/matches/${matchId}/results/import`, {
-    method: "POST",
-    credentials: "include",
-    body: form,
-  });
-  const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload?.error?.message ?? `Import failed (${response.status}).`);
-  }
-  return mapResultImport(payload.data as ResultImportDto);
-}
-
-// GET /api/admin/result-imports/{id}
-export async function getResultImport(importId: string) {
-  const dto = await http.get<ResultImportDto>(`/api/admin/result-imports/${importId}`);
-  return mapResultImport(dto);
-}
-
-// POST /api/admin/result-imports/{id}/validate
-export async function validateResultImport(importId: string) {
-  const dto = await http.post<ResultImportDto>(`/api/admin/result-imports/${importId}/validate`);
-  return mapResultImport(dto);
-}
-
-// POST /api/admin/result-imports/{id}/commit
-export async function commitResultImport(importId: string) {
-  const dto = await http.post<ResultImportDto>(`/api/admin/result-imports/${importId}/commit`);
-  return mapResultImport(dto);
 }

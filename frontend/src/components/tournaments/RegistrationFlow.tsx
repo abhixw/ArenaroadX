@@ -63,11 +63,13 @@ export function RegistrationFlow({
     }
 
     setStep("account");
-    getMyGameAccounts().then((all) => {
-      const forGame = all.filter((a) => a.gameId === game.id);
-      setAccounts(forGame);
-      setSelectedAccountId(forGame[0]?.id ?? null);
-    });
+    getMyGameAccounts()
+      .then((all) => {
+        const forGame = all.filter((a) => a.gameId === game.id);
+        setAccounts(forGame);
+        setSelectedAccountId(forGame[0]?.id ?? null);
+      })
+      .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load your game accounts."));
   }, [open, game.id, tournament.id, resumePendingPayment]);
 
   useEffect(() => {
@@ -158,6 +160,11 @@ export function RegistrationFlow({
         razorpaySignature: checkoutResult.razorpay_signature,
       });
       setStep("success");
+      // Refresh the parent page's data as soon as the payment is actually confirmed, not only
+      // when the user clicks "Done" -- if they close the modal (or navigate away) during the
+      // brief verification window, that click never happens and the page is left showing
+      // stale "Complete Payment" state even though the payment succeeded on the backend.
+      onSuccess();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "We couldn't verify your payment.");
       setStep("failure");
@@ -166,8 +173,18 @@ export function RegistrationFlow({
     }
   }
 
+  // Payment verification is already in flight against the backend by this point -- closing
+  // the modal here wouldn't cancel it, only hide the result, so the close affordances are
+  // disabled until it settles into "success" or "failure".
+  const closable = step !== "processing";
+
   return (
-    <Modal open={open} onClose={onClose} title={`Register — ${tournament.name}`} widthClassName="max-w-lg">
+    <Modal
+      open={open}
+      onClose={closable ? onClose : () => {}}
+      title={`Register — ${tournament.name}`}
+      widthClassName="max-w-lg"
+    >
       {step === "account" ? (
         <div className="space-y-4">
           <p className="text-sm text-gray-500">

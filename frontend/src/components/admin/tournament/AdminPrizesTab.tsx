@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { PrizeStatusBadge, Badge } from "@/components/ui/Badge";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { ApiError } from "@/api/client";
@@ -20,10 +21,11 @@ export function AdminPrizesTab({ tournament }: { tournament: Tournament }) {
   const {
     data: prizes,
     loading: loadingPrizes,
+    error: prizesError,
     refetch: refetchPrizes,
   } = useAsyncData(() => listPrizes(tournament.id, tournament.name), [tournament.id, tournament.name]);
   const { data: participants } = useAsyncData(() => listParticipants(tournament.id), [tournament.id]);
-  const { data: refunds, loading: loadingRefunds, refetch: refetchRefunds } = useAsyncData(
+  const { data: refunds, loading: loadingRefunds, error: refundsError, refetch: refetchRefunds } = useAsyncData(
     () => listRefunds(tournament.id),
     [tournament.id],
   );
@@ -68,7 +70,9 @@ export function AdminPrizesTab({ tournament }: { tournament: Tournament }) {
         {error ? <p className="mt-2 text-xs font-medium text-danger-600">{error}</p> : null}
 
         <div className="mt-4">
-          {loadingPrizes ? (
+          {prizesError ? (
+            <ErrorState message="Couldn't load prizes." onRetry={refetchPrizes} />
+          ) : loadingPrizes ? (
             <Skeleton className="h-20 w-full" />
           ) : (prizes ?? []).length === 0 ? (
             <EmptyState icon={Gift} title="No prizes allocated yet" />
@@ -107,7 +111,9 @@ export function AdminPrizesTab({ tournament }: { tournament: Tournament }) {
       <Card className="p-5">
         <p className="text-sm font-bold text-gray-900">Refunds</p>
         <div className="mt-4">
-          {loadingRefunds ? (
+          {refundsError ? (
+            <ErrorState message="Couldn't load refunds." onRetry={refetchRefunds} />
+          ) : loadingRefunds ? (
             <Skeleton className="h-20 w-full" />
           ) : (refunds ?? []).length === 0 ? (
             <p className="text-sm text-gray-400">No refunds for this tournament.</p>

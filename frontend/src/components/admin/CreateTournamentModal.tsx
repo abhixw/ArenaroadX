@@ -36,9 +36,14 @@ export function CreateTournamentModal({
     setImageUrl(games.find((g) => g.id === newGameId)?.imageUrl ?? "");
   }
 
-  async function handleCreate() {
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
     if (!gameId || !name.trim() || !startTime || !registrationDeadline) {
       setError("Game, name, start time, and registration deadline are all required.");
+      return;
+    }
+    if (new Date(registrationDeadline) >= new Date(startTime)) {
+      setError("Registration deadline must be before the start time.");
       return;
     }
     setBusy(true);
@@ -72,7 +77,7 @@ export function CreateTournamentModal({
 
   return (
     <Modal open onClose={onClose} title="Create Tournament" widthClassName="max-w-lg">
-      <div className="space-y-3">
+      <form onSubmit={handleCreate} className="space-y-3">
         <div>
           <label className="text-xs font-semibold text-gray-500">Game</label>
           <select
@@ -101,6 +106,7 @@ export function CreateTournamentModal({
         <div>
           <label className="text-xs font-semibold text-gray-500">Name</label>
           <input
+            required
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
@@ -154,6 +160,7 @@ export function CreateTournamentModal({
           <div>
             <label className="text-xs font-semibold text-gray-500">Registration Deadline</label>
             <input
+              required
               type="datetime-local"
               value={registrationDeadline}
               onChange={(e) => setRegistrationDeadline(e.target.value)}
@@ -163,6 +170,7 @@ export function CreateTournamentModal({
           <div>
             <label className="text-xs font-semibold text-gray-500">Start Time</label>
             <input
+              required
               type="datetime-local"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
@@ -202,10 +210,10 @@ export function CreateTournamentModal({
           Prize Pool: ₹{prizePool.toLocaleString("en-IN")}
         </p>
         {error ? <p className="text-xs font-medium text-danger-600">{error}</p> : null}
-        <Button className="w-full" onClick={handleCreate} disabled={busy}>
+        <Button type="submit" className="w-full" disabled={busy}>
           Create Tournament
         </Button>
-      </div>
+      </form>
     </Modal>
   );
 }

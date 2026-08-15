@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Thumb } from "@/components/ui/Thumb";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { listGames, createGame, updateGame, deleteGame, type GameInput } from "@/api/admin/games";
@@ -12,7 +13,7 @@ import { ApiError } from "@/api/client";
 import type { Game } from "@/types";
 
 export default function AdminGames() {
-  const { data: games, loading, refetch } = useAsyncData(listGames);
+  const { data: games, loading, error, refetch } = useAsyncData(listGames);
   const [editingGame, setEditingGame] = useState<Game | "new" | null>(null);
   const [deletingGame, setDeletingGame] = useState<Game | null>(null);
 
@@ -26,6 +27,9 @@ export default function AdminGames() {
         </Button>
       </div>
 
+      {error ? (
+        <ErrorState message="Couldn't load games." onRetry={refetch} />
+      ) : (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {loading
           ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 w-full" />)
@@ -50,6 +54,7 @@ export default function AdminGames() {
               </Card>
             ))}
       </div>
+      )}
 
       {editingGame ? (
         <EditGameModal
@@ -89,6 +94,7 @@ function EditGameModal({
   const [description, setDescription] = useState(game?.description ?? "");
   const [imageUrl, setImageUrl] = useState(game?.imageUrl ?? "");
   const [gameType, setGameType] = useState<string>(game?.gameType ?? "BATTLE_ROYALE");
+  const [isActive, setIsActive] = useState(game?.isActive ?? true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -101,7 +107,7 @@ function EditGameModal({
     setError(null);
     const input: GameInput = { name: name.trim(), description, imageUrl, gameType };
     try {
-      if (game) await updateGame(game.id, input);
+      if (game) await updateGame(game.id, { ...input, isActive });
       else await createGame(input);
       onSaved();
     } catch (e) {
@@ -153,6 +159,12 @@ function EditGameModal({
             <option value="SHOOTER">Shooter</option>
           </select>
         </div>
+        {game ? (
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+            Active
+          </label>
+        ) : null}
         {error ? <p className="text-xs font-medium text-danger-600">{error}</p> : null}
         <Button className="w-full" onClick={handleSave} disabled={busy}>
           Save

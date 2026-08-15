@@ -4,8 +4,10 @@ from beanie import PydanticObjectId
 from pymongo.errors import DuplicateKeyError
 
 from app.core.config import settings
+from app.core.database import session_client
 from app.core.exceptions import (
     AccountNotActiveError,
+    AdminCannotRegisterError,
     AlreadyRegisteredError,
     GameAccountRequiredError,
     RegistrationDeadlinePassedError,
@@ -17,7 +19,7 @@ from app.core.exceptions import (
 )
 from app.models.registration import Registration, RegistrationStatus
 from app.models.tournament import TournamentStatus
-from app.models.user import User, UserStatus
+from app.models.user import User, UserRole, UserStatus
 from app.repositories import game_account_repository, registration_repository, tournament_repository, user_repository
 
 
@@ -26,9 +28,11 @@ async def _sweep_expired_reservations(tournament_id: PydanticObjectId) -> None:
     expired lazily, right before a new registration attempt needs accurate capacity."""
     expired = await registration_repository.list_expired_pending(tournament_id)
     for registration in expired:
-        registration.registration_status = RegistrationStatus.EXPIRED
-        await registration.save()
-        await registration_repository.release_slot(tournament_id)
+        async with session_client(Registration).start_session() as session:
+            async with await session.start_transaction():
+                registration.registration_status = RegistrationStatus.EXPIRED
+                await registration.save(session=session)
+                await registration_repository.release_slot(tournament_id, session=session)
 
 
 async def register_for_tournament(*, user_id: PydanticObjectId, tournament_id: PydanticObjectId) -> Registration:
@@ -37,6 +41,11 @@ async def register_for_tournament(*, user_id: PydanticObjectId, tournament_id: P
         raise UserNotFoundError()
     if user.status != UserStatus.ACTIVE:
         raise AccountNotActiveError()
+    # An admin who is also a confirmed participant would have unilateral power over that
+    # tournament's own results and prize payouts -- a conflict of interest, not just an
+    # odd-looking entry in the Participants tab.
+    if user.role == UserRole.ADMIN:
+        raise AdminCannotRegisterError()
 
     tournament = await tournament_repository.get_by_id(tournament_id)
     if tournament is None:

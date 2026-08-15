@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from beanie import PydanticObjectId
+from pymongo.asynchronous.client_session import AsyncClientSession
 
 from app.core.exceptions import AppError, GameNotFoundError, InvalidTournamentStatusError, TournamentNotFoundError
 from app.models.tournament import Tournament, TournamentStatus
@@ -149,10 +150,12 @@ async def update_tournament(tournament_id: PydanticObjectId, payload: Tournament
     return tournament
 
 
-async def transition_status(tournament_id: PydanticObjectId, target_status: TournamentStatus) -> Tournament:
+async def transition_status(
+    tournament_id: PydanticObjectId, target_status: TournamentStatus, *, session: AsyncClientSession | None = None
+) -> Tournament:
     tournament = await get_tournament(tournament_id)
     _apply_status_transition(tournament, target_status)
-    await tournament.save()
+    await tournament.save(session=session)
     return tournament
 
 

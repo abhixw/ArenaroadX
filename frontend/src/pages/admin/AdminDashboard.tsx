@@ -6,6 +6,7 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { TournamentStatusBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { listTournaments } from "@/api/admin/tournaments";
 import { listGames } from "@/api/admin/games";
@@ -17,7 +18,7 @@ const REVIEW_QUEUE_STATUSES = ["RESULTS_PENDING", "RESULTS_REVIEW"];
 
 export default function AdminDashboard() {
   const { user } = useAuth();
-  const { data: tournaments, loading } = useAsyncData(listTournaments);
+  const { data: tournaments, loading, error, refetch } = useAsyncData(listTournaments);
   const { data: games } = useAsyncData(listGames);
 
   const active = (tournaments ?? []).filter((t) => LIVE_ISH.includes(t.status)).length;
@@ -48,7 +49,9 @@ export default function AdminDashboard() {
             </Link>
           </div>
           <div className="mt-3 space-y-2">
-            {loading ? (
+            {error ? (
+              <ErrorState message="Couldn't load tournaments." onRetry={refetch} />
+            ) : loading ? (
               <Skeleton className="h-24 w-full" />
             ) : recent.length === 0 ? (
               <EmptyState icon={CalendarDays} title="No tournaments yet" />

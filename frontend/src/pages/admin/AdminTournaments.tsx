@@ -5,6 +5,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { TournamentStatusBadge } from "@/components/ui/Badge";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { listTournaments } from "@/api/admin/tournaments";
@@ -13,7 +14,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { CreateTournamentModal } from "@/components/admin/CreateTournamentModal";
 
 export default function AdminTournaments() {
-  const { data: tournaments, loading, refetch } = useAsyncData(listTournaments);
+  const { data: tournaments, loading, error, refetch } = useAsyncData(listTournaments);
   const { data: games } = useAsyncData(getGames);
   const [creating, setCreating] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -49,6 +50,7 @@ export default function AdminTournaments() {
         <div className="relative sm:max-w-xs sm:flex-1">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
+            aria-label="Search by tournament or game"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             placeholder="Search by tournament or game..."
@@ -61,7 +63,11 @@ export default function AdminTournaments() {
       </div>
 
       <Card className="overflow-hidden p-0">
-        {loading ? (
+        {error ? (
+          <div className="p-5">
+            <ErrorState message="Couldn't load tournaments." onRetry={refetch} />
+          </div>
+        ) : loading ? (
           <div className="space-y-3 p-5">
             <Skeleton className="h-14 w-full" />
             <Skeleton className="h-14 w-full" />

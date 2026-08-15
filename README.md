@@ -257,7 +257,7 @@ the Render dashboard after the first deploy. `JWT_SECRET_KEY` is auto-generated 
 
 Without the blueprint, the equivalent manual setup is: Root Directory blank (repo root), Build
 Command `pip install -r requirements.txt`, Start Command
-`uvicorn app.main:app --host 0.0.0.0 --port $PORT`, plus every var from `.env.example` set in the
+`uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers`, plus every var from `.env.example` set in the
 dashboard.
 
 **Set `CORS_ORIGINS` to your deployed Vercel URL(s)** (comma-separated, no trailing slash) once you

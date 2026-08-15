@@ -1,4 +1,5 @@
 from beanie import PydanticObjectId
+from pymongo.asynchronous.client_session import AsyncClientSession
 
 from app.models.prize import Prize
 
@@ -19,14 +20,14 @@ async def get_by_tournament_and_user(tournament_id: PydanticObjectId, user_id: P
     return await Prize.find_one(Prize.tournament_id == tournament_id, Prize.user_id == user_id)
 
 
-async def create(**fields) -> Prize:
+async def create(*, session: AsyncClientSession | None = None, **fields) -> Prize:
     prize = Prize(**fields)
-    await prize.insert()
+    await prize.insert(session=session)
     return prize
 
 
-async def update(prize: Prize, **fields) -> Prize:
+async def update(prize: Prize, *, session: AsyncClientSession | None = None, **fields) -> Prize:
     for key, value in fields.items():
         setattr(prize, key, value)
-    await prize.save()
+    await prize.save(session=session)
     return prize

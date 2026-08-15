@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { Topbar } from "@/components/layout/Topbar";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Tabs } from "@/components/ui/Tabs";
 import { TournamentStatusBadge } from "@/components/ui/Badge";
 import { useAsyncData } from "@/hooks/useAsyncData";
@@ -29,11 +30,15 @@ export default function AdminTournamentDetail() {
   const { id } = useParams<{ id: string }>();
   const [tab, setTab] = useState<Tab>("overview");
 
-  const { data: tournament, loading, refetch } = useAsyncData(() => getTournament(id!), [id]);
+  const { data: tournament, loading, error, refetch } = useAsyncData(() => getTournament(id!), [id]);
   const { data: games } = useAsyncData(getGames);
 
-  if (!loading && !tournament) {
+  if (!loading && !error && !tournament) {
     return <Navigate to="/admin/tournaments" replace />;
+  }
+
+  if (error) {
+    return <ErrorState message="Couldn't load this tournament." onRetry={refetch} />;
   }
 
   if (loading || !tournament) {

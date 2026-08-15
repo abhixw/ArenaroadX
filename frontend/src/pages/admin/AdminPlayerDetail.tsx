@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Badge, PaymentStatusBadge, RegistrationStatusBadge } from "@/components/ui/Badge";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { ApiError } from "@/api/client";
@@ -16,7 +17,7 @@ import type { UserStatus } from "@/types";
 
 export default function AdminPlayerDetail() {
   const { id } = useParams<{ id: string }>();
-  const { data: history, loading, refetch } = useAsyncData(() => getPlayerHistory(id!), [id]);
+  const { data: history, loading, error: loadError, refetch } = useAsyncData(() => getPlayerHistory(id!), [id]);
   const [error, setError] = useState<string | null>(null);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -48,7 +49,7 @@ export default function AdminPlayerDetail() {
     setResetMessage(null);
     try {
       await resetUserPassword(id!, newPassword);
-      setResetMessage(`Password reset. New password: ${newPassword}`);
+      setResetMessage("Password reset. Relay the new password to the player now — it will not be shown again.");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not reset password.");
     } finally {
@@ -56,7 +57,7 @@ export default function AdminPlayerDetail() {
     }
   }
 
-  if (!loading && !history) {
+  if (!loading && !loadError && !history) {
     return <Navigate to="/admin/players" replace />;
   }
 
@@ -69,7 +70,9 @@ export default function AdminPlayerDetail() {
         <ArrowLeft size={15} /> Back to players
       </Link>
 
-      {loading || !history ? (
+      {loadError ? (
+        <ErrorState message="Couldn't load this player." onRetry={refetch} />
+      ) : loading || !history ? (
         <Skeleton className="h-96 w-full" />
       ) : (
         <>

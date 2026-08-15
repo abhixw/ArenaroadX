@@ -4,6 +4,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Thumb } from "@/components/ui/Thumb";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getTournaments } from "@/api/tournaments";
@@ -14,7 +15,7 @@ import { useMemo } from "react";
 const PUBLISHED = ["RESULTS_PUBLISHED", "COMPLETED"];
 
 export default function Leaderboards() {
-  const { data: tournaments, loading } = useAsyncData(getTournaments);
+  const { data: tournaments, loading, error, refetch } = useAsyncData(getTournaments);
   const { data: games } = useAsyncData(getGames);
   const gameMap = useMemo(() => new Map((games ?? []).map((g) => [g.id, g])), [games]);
 
@@ -26,7 +27,11 @@ export default function Leaderboards() {
     <div>
       <Topbar title="Leaderboards" subtitle="Published results across every tournament you've played." />
 
-      {loading ? (
+      {error ? (
+        <Card className="p-5">
+          <ErrorState message="Couldn't load leaderboards." onRetry={refetch} />
+        </Card>
+      ) : loading ? (
         <div className="space-y-3">
           <Skeleton className="h-20 w-full" />
           <Skeleton className="h-20 w-full" />

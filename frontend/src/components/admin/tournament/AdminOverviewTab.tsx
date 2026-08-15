@@ -69,7 +69,20 @@ export function AdminOverviewTab({
   const [actionBusy, setActionBusy] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
-  async function handleSave() {
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError("Name is required.");
+      return;
+    }
+    if (Number(entryFee) < 0 || Number(maxPlayers) < 1) {
+      setError("Entry fee must be 0 or greater, and max players must be at least 1.");
+      return;
+    }
+    if (new Date(registrationDeadline) >= new Date(startTime)) {
+      setError("Registration deadline must be before the start time.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -116,7 +129,8 @@ export function AdminOverviewTab({
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <Card className="space-y-4 p-5 lg:col-span-2">
+      <Card className="p-5 lg:col-span-2">
+        <form onSubmit={handleSave} className="space-y-4">
         <p className="text-sm font-bold text-gray-900">Tournament Details</p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
@@ -136,6 +150,7 @@ export function AdminOverviewTab({
           <div>
             <label className="text-xs font-semibold text-gray-500">Name</label>
             <input
+              required
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
@@ -202,6 +217,7 @@ export function AdminOverviewTab({
           <div>
             <label className="text-xs font-semibold text-gray-500">Registration Deadline</label>
             <input
+              required
               type="datetime-local"
               value={registrationDeadline}
               onChange={(e) => setRegistrationDeadline(e.target.value)}
@@ -211,6 +227,7 @@ export function AdminOverviewTab({
           <div>
             <label className="text-xs font-semibold text-gray-500">Start Time</label>
             <input
+              required
               type="datetime-local"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
@@ -247,9 +264,10 @@ export function AdminOverviewTab({
           />
         </div>
         {error ? <p className="text-xs font-medium text-danger-600">{error}</p> : null}
-        <Button onClick={handleSave} disabled={busy}>
+        <Button type="submit" disabled={busy}>
           {busy ? <Loader2 size={16} className="animate-spin" /> : saved ? "Saved" : "Save Changes"}
         </Button>
+        </form>
       </Card>
 
       <Card className="h-fit space-y-3 p-5">

@@ -3,7 +3,14 @@ from decimal import Decimal
 
 from beanie import PydanticObjectId
 
-from app.core.exceptions import PrizeNotFoundError, ResultsNotPublishedError, TournamentNotFoundError, UserNotFoundError
+from app.core.database import session_client
+from app.core.exceptions import (
+    PrizeAlreadyPaidError,
+    PrizeNotFoundError,
+    ResultsNotPublishedError,
+    TournamentNotFoundError,
+    UserNotFoundError,
+)
 from app.models.prize import Prize, PrizePayoutStatus
 from app.models.tournament import TournamentStatus
 from app.models.transaction import TransactionType
@@ -103,18 +110,23 @@ async def mark_prize_paid(prize_id: PydanticObjectId) -> Prize:
     prize = await prize_repository.get_by_id(prize_id)
     if prize is None:
         raise PrizeNotFoundError()
+    if prize.payout_status == PrizePayoutStatus.PAID:
+        raise PrizeAlreadyPaidError()
 
-    prize = await prize_repository.update(
-        prize, payout_status=PrizePayoutStatus.PAID, paid_at=datetime.now(timezone.utc)
-    )
+    async with session_client(Prize).start_session() as session:
+        async with await session.start_transaction():
+            prize = await prize_repository.update(
+                prize, payout_status=PrizePayoutStatus.PAID, paid_at=datetime.now(timezone.utc), session=session
+            )
 
-    # Every prize payment is recorded in the financial ledger (spec section 15).
-    await transaction_repository.create(
-        tournament_id=prize.tournament_id,
-        user_id=prize.user_id,
-        type=TransactionType.PRIZE,
-        amount_paise=-prize.amount_paise,
-        reference_id=prize.id,
-        note=f"Prize paid for rank {prize.rank}.",
-    )
+            # Every prize payment is recorded in the financial ledger (spec section 15).
+            await transaction_repository.create(
+                tournament_id=prize.tournament_id,
+                user_id=prize.user_id,
+                type=TransactionType.PRIZE,
+                amount_paise=-prize.amount_paise,
+                reference_id=prize.id,
+                note=f"Prize paid for rank {prize.rank}.",
+                session=session,
+            )
     return prize

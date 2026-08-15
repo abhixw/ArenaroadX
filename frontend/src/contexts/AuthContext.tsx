@@ -6,7 +6,7 @@ import {
   register as apiRegister,
   updateProfile as apiUpdateProfile,
 } from "@/api/auth";
-import { registerUnauthorizedHandler } from "@/api/client";
+import { registerForbiddenHandler, registerUnauthorizedHandler } from "@/api/client";
 import type { User } from "@/types";
 
 interface AuthContextValue {
@@ -34,6 +34,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     registerUnauthorizedHandler(() => setUser(null));
+    // A 403 means this tab's cached identity no longer matches the browser's actual session
+    // cookie (most commonly: a different account logged in from another tab). Re-fetching
+    // resyncs `user` to whoever is really logged in now, so role-gated layouts like
+    // AdminLayout correctly redirect instead of continuing to render with stale state.
+    registerForbiddenHandler(() => {
+      getMe()
+        .then(setUser)
+        .catch(() => setUser(null));
+    });
   }, []);
 
   async function login(email: string, password: string) {

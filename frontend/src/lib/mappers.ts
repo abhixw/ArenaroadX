@@ -95,7 +95,7 @@ export function mapGameAccount(dto: GameAccountDto): GameAccount {
     gameUsername: dto.game_username ?? "",
     verifiedAt: dto.verified_at,
     // The backend has no stored "locked" flag -- lock state is only enforced (and
-    // discovered) at write time via a GAME_ACCOUNT_LOCKED error. See GameAccounts.tsx.
+    // discovered) at write time via a GAME_ACCOUNT_LOCKED error from the registration flow.
     lockedAt: null,
   };
 }

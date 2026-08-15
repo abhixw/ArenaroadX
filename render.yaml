@@ -5,7 +5,10 @@ services:
     plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # --proxy-headers: trust X-Forwarded-For from Render's edge proxy so request.client.host
+    # (used to key rate limiting -- see app.core.rate_limit) reflects the real visitor's IP
+    # instead of Render's internal proxy IP for every request.
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.11

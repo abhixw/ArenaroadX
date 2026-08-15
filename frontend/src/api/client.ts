@@ -14,13 +14,26 @@ export class ApiError extends Error {
   }
 }
 
-// The backend session is an HTTP-only cookie -- a 401 means "not logged in (anymore)".
-// AuthContext registers a handler here at startup so this module can react without a
-// circular import back into contexts/.
+// The backend session is a single HTTP-only cookie shared across every tab -- a 401 means
+// "not logged in (anymore)". AuthContext registers a handler here at startup so this module
+// can react without a circular import back into contexts/.
 type UnauthorizedHandler = () => void;
 let onUnauthorized: UnauthorizedHandler | null = null;
 export function registerUnauthorizedHandler(handler: UnauthorizedHandler): void {
   onUnauthorized = handler;
+}
+
+// A 403 on an otherwise-valid session usually means the *account* changed underneath this
+// tab, not that this specific request was disallowed: since the session cookie is shared
+// across every open tab, logging into a different (e.g. non-admin) account in one tab
+// silently swaps the session for all the others. A tab still showing cached admin state
+// then has every admin fetch rejected here, with no way to notice on its own. Re-checking
+// identity lets the UI correct itself (e.g. AdminLayout redirecting away) instead of being
+// stuck rendering a shell full of "couldn't load" errors indefinitely.
+type ForbiddenHandler = () => void;
+let onForbidden: ForbiddenHandler | null = null;
+export function registerForbiddenHandler(handler: ForbiddenHandler): void {
+  onForbidden = handler;
 }
 
 type QueryValue = string | number | boolean | undefined | null;
@@ -110,6 +123,8 @@ async function requestEnvelope<T>(path: string, options: RequestOptions = {}): P
     const code = errPayload?.error?.code ?? "UNKNOWN_ERROR";
     if (response.status === 401) {
       onUnauthorized?.();
+    } else if (response.status === 403) {
+      onForbidden?.();
     }
     throw new ApiError(message, response.status, code);
   }

@@ -192,6 +192,8 @@ function EntryListEditor({
               className="w-24 rounded-lg border border-gray-200 px-2 py-1.5 text-sm outline-none focus:border-primary-400"
             />
             <button
+              type="button"
+              aria-label="Remove row"
               onClick={() => onChange(entries.filter((_, idx) => idx !== i))}
               className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"
             >

@@ -1,8 +1,10 @@
 import re
 
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 PASSWORD_MIN_LENGTH = 8
+PASSWORD_MAX_LENGTH = 128
+NAME_MAX_LENGTH = 120
 PHONE_PATTERN = re.compile(r"^\+?\d{10,15}$")
 
 
@@ -21,9 +23,9 @@ def validate_password_strength(value: str) -> str:
 class RegisterRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    name: str
+    name: str = Field(max_length=NAME_MAX_LENGTH)
     email: EmailStr
-    password: str
+    password: str = Field(max_length=PASSWORD_MAX_LENGTH)
     phone: str
 
     @field_validator("name")
@@ -51,13 +53,13 @@ class LoginRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     email: EmailStr
-    password: str
+    password: str = Field(max_length=PASSWORD_MAX_LENGTH)
 
 
 class UpdateProfileRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    name: str | None = None
+    name: str | None = Field(default=None, max_length=NAME_MAX_LENGTH)
     phone: str | None = None
 
     @field_validator("name")

@@ -1,5 +1,6 @@
 from beanie import PydanticObjectId
 from beanie.operators import In
+from pymongo.asynchronous.client_session import AsyncClientSession
 
 from app.models.payment import Payment, PaymentStatus
 
@@ -30,14 +31,14 @@ async def list_all(*, page: int = 1, page_size: int = 20) -> tuple[list[Payment]
     return items, total
 
 
-async def create(**fields) -> Payment:
+async def create(*, session: AsyncClientSession | None = None, **fields) -> Payment:
     payment = Payment(**fields)
-    await payment.insert()
+    await payment.insert(session=session)
     return payment
 
 
-async def update(payment: Payment, **fields) -> Payment:
+async def update(payment: Payment, *, session: AsyncClientSession | None = None, **fields) -> Payment:
     for key, value in fields.items():
         setattr(payment, key, value)
-    await payment.save()
+    await payment.save(session=session)
     return payment

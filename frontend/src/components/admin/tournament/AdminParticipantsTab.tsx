@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { PaymentStatusBadge, RegistrationStatusBadge } from "@/components/ui/Badge";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { ApiError } from "@/api/client";
@@ -14,7 +15,7 @@ import type { Participant } from "@/types/admin";
 import type { Tournament } from "@/types";
 
 export function AdminParticipantsTab({ tournament }: { tournament: Tournament }) {
-  const { data: participants, loading, refetch } = useAsyncData(
+  const { data: participants, loading, error, refetch } = useAsyncData(
     () => listParticipants(tournament.id),
     [tournament.id],
   );
@@ -28,7 +29,9 @@ export function AdminParticipantsTab({ tournament }: { tournament: Tournament })
       </div>
 
       <div className="mt-4">
-        {loading ? (
+        {error ? (
+          <ErrorState message="Couldn't load participants." onRetry={refetch} />
+        ) : loading ? (
           <Skeleton className="h-32 w-full" />
         ) : (participants ?? []).length === 0 ? (
           <EmptyState icon={Users} title="No confirmed participants yet" description="They'll show up here once registrations are confirmed." />

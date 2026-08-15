@@ -5,6 +5,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { Thumb } from "@/components/ui/Thumb";
 import { TournamentStatusBadge } from "@/components/ui/Badge";
 import { LeaderboardTable } from "@/components/leaderboard/LeaderboardTable";
@@ -24,7 +25,7 @@ export default function TournamentDetails() {
   const { user } = useAuth();
   const [flowOpen, setFlowOpen] = useState(false);
 
-  const { data: tournament, loading, refetch: refetchTournament } = useAsyncData(
+  const { data: tournament, loading, error, refetch: refetchTournament } = useAsyncData(
     () => getTournament(id!),
     [id],
   );
@@ -41,8 +42,12 @@ export default function TournamentDetails() {
   const isConfirmed = registration?.status === "CONFIRMED";
   const isReserved = registration?.status === "RESERVED";
 
-  if (!loading && !tournament) {
+  if (!loading && !error && !tournament) {
     return <Navigate to="/tournaments" replace />;
+  }
+
+  if (error) {
+    return <ErrorState message="Couldn't load this tournament." onRetry={refetchTournament} />;
   }
 
   if (loading || !tournament || !game) {
@@ -164,12 +169,16 @@ export default function TournamentDetails() {
               <p className="mt-2 text-sm text-gray-500">Registration is not currently open.</p>
             )}
 
-            {!registration && tournament.status === "REGISTRATION_OPEN" ? (
+            {/* Admins can browse the player-facing site, but registering as a participant in a
+                tournament they administer is a conflict of interest -- they'd have unilateral
+                power over that tournament's own results and prize payouts. The backend also
+                rejects this; hiding the button here just avoids the confusing round-trip. */}
+            {user?.role !== "ADMIN" && !registration && tournament.status === "REGISTRATION_OPEN" ? (
               <Button className="mt-4 w-full" onClick={() => setFlowOpen(true)}>
                 Register Now
               </Button>
             ) : null}
-            {isReserved ? (
+            {user?.role !== "ADMIN" && isReserved ? (
               <Button className="mt-4 w-full" onClick={() => setFlowOpen(true)}>
                 Complete Payment
               </Button>

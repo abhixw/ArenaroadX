@@ -5,6 +5,14 @@ import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/hooks/useAuth";
 import { ApiError } from "@/api/client";
 
+function passwordError(password: string): string | null {
+  if (password.length < 8) return "Password must be at least 8 characters long.";
+  if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter.";
+  if (!/[a-z]/.test(password)) return "Password must contain at least one lowercase letter.";
+  if (!/\d/.test(password)) return "Password must contain at least one digit.";
+  return null;
+}
+
 export default function Register() {
   const { user, loading, register } = useAuth();
   const navigate = useNavigate();
@@ -22,6 +30,11 @@ export default function Register() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const pwError = passwordError(password);
+    if (pwError) {
+      setError(pwError);
+      return;
+    }
     setBusy(true);
     try {
       await register(name, email, password, phone.replace(/[\s-]/g, ""));

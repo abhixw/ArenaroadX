@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { TournamentStatusBadge } from "@/components/ui/Badge";
 import { LeaderboardTable } from "@/components/leaderboard/LeaderboardTable";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,11 +15,11 @@ import { getLeaderboard } from "@/api/results";
 export default function LeaderboardDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { data: tournament, loading } = useAsyncData(() => getTournament(id!), [id]);
+  const { data: tournament, loading, error, refetch } = useAsyncData(() => getTournament(id!), [id]);
   const { data: game } = useAsyncData(() => getGame(tournament?.gameId ?? ""), [tournament?.gameId]);
   const { data: rows, loading: loadingRows } = useAsyncData(() => getLeaderboard(id!), [id]);
 
-  if (!loading && !tournament) {
+  if (!loading && !error && !tournament) {
     return <Navigate to="/leaderboards" replace />;
   }
 
@@ -31,7 +32,9 @@ export default function LeaderboardDetail() {
         <ArrowLeft size={15} /> Back to leaderboards
       </Link>
 
-      {loading || !tournament || !game ? (
+      {error ? (
+        <ErrorState message="Couldn't load this leaderboard." onRetry={refetch} />
+      ) : loading || !tournament || !game ? (
         <Skeleton className="h-96 w-full" />
       ) : (
         <>

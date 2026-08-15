@@ -31,6 +31,7 @@ export function Topbar({ title, subtitle }: TopbarProps) {
       <form onSubmit={onSearchSubmit} className="relative hidden md:block">
         <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
         <input
+          aria-label="Search tournaments"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search tournaments..."
