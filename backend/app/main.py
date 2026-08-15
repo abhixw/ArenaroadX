@@ -128,9 +128,12 @@ async def root() -> dict[str, str]:
     # process actually has loaded for RAZORPAY_KEY_ID, vs. what's shown in the Render dashboard.
     # Remove once the "Authentication failed" investigation is resolved.
     key_prefix = settings.RAZORPAY_KEY_ID[:14] if settings.RAZORPAY_KEY_ID else None
+    secret = settings.RAZORPAY_KEY_SECRET
     return {
         "status": "ok",
         "service": settings.APP_NAME,
         "environment": settings.ENVIRONMENT,
         "razorpay_key_prefix": key_prefix,
+        "razorpay_secret_length": str(len(secret)) if secret else "0",
+        "razorpay_secret_length_trimmed": str(len(secret.strip())) if secret else "0",
     }
