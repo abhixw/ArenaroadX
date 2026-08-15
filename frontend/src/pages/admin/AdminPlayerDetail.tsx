@@ -10,7 +10,7 @@ import { Badge, PaymentStatusBadge, RegistrationStatusBadge } from "@/components
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { ApiError } from "@/api/client";
 import { getPlayerHistory } from "@/api/admin/registrations";
-import { updateUserStatus } from "@/api/admin/users";
+import { resetUserPassword, updateUserStatus } from "@/api/admin/users";
 import { formatDate } from "@/lib/utils";
 import type { UserStatus } from "@/types";
 
@@ -18,16 +18,39 @@ export default function AdminPlayerDetail() {
   const { id } = useParams<{ id: string }>();
   const { data: history, loading, refetch } = useAsyncData(() => getPlayerHistory(id!), [id]);
   const [error, setError] = useState<string | null>(null);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function handleStatusChange(status: UserStatus) {
     setBusy(true);
     setError(null);
+    setResetMessage(null);
     try {
       await updateUserStatus(id!, status);
       refetch();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not update status.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleResetPassword() {
+    // No self-service "forgot password" flow exists (no email infrastructure) -- the admin
+    // sets the new password directly here and relays it to the player out-of-band.
+    const newPassword = window.prompt(
+      "Enter a new password for this player (min 8 chars, with an uppercase letter, a lowercase letter, and a digit). It will not be shown again after this, so relay it to the player now."
+    );
+    if (!newPassword) return;
+
+    setBusy(true);
+    setError(null);
+    setResetMessage(null);
+    try {
+      await resetUserPassword(id!, newPassword);
+      setResetMessage(`Password reset. New password: ${newPassword}`);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Could not reset password.");
     } finally {
       setBusy(false);
     }
@@ -139,6 +162,10 @@ export default function AdminPlayerDetail() {
                     Ban
                   </Button>
                 ) : null}
+                <Button size="sm" variant="outline" className="w-full" disabled={busy} onClick={handleResetPassword}>
+                  Reset Password
+                </Button>
+                {resetMessage ? <p className="text-xs font-medium text-success-600">{resetMessage}</p> : null}
               </div>
             </Card>
           </div>

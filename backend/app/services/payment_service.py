@@ -150,8 +150,8 @@ async def list_my_payments(user_id: PydanticObjectId) -> list[Payment]:
     return await payment_repository.list_by_user(user_id)
 
 
-async def list_all_payments() -> list[AdminPaymentResponse]:
-    payments = await payment_repository.list_all()
+async def list_all_payments(*, page: int = 1, page_size: int = 20) -> tuple[list[AdminPaymentResponse], int]:
+    payments, total = await payment_repository.list_all(page=page, page_size=page_size)
 
     user_ids = {p.user_id for p in payments}
     tournament_ids = {p.tournament_id for p in payments}
@@ -180,7 +180,7 @@ async def list_all_payments() -> list[AdminPaymentResponse]:
                 created_at=p.created_at,
             )
         )
-    return entries
+    return entries, total
 
 
 async def get_payment(*, payment_id: PydanticObjectId, user_id: PydanticObjectId, is_admin: bool) -> Payment:

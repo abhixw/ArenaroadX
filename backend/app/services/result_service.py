@@ -11,6 +11,7 @@ from app.core.exceptions import (
 )
 from app.models.match_participant import MatchParticipationStatus
 from app.models.match_result import MatchResult, MatchResultStatus
+from app.models.prize import PrizePayoutStatus
 from app.models.result_revision import ResultRevision
 from app.models.tournament import TournamentStatus
 from app.models.tournament_result import TournamentResult, TournamentResultStatus
@@ -18,6 +19,7 @@ from app.repositories import (
     match_participant_repository,
     match_repository,
     match_result_repository,
+    prize_repository,
     result_revision_repository,
     scoring_rule_repository,
     tournament_repository,
@@ -174,6 +176,11 @@ async def correct_result(
         if old_values.get(field) != new_value
     }
 
+    # A correction to a result that already had a PAID prize needs a human to look at it --
+    # the payout may now be wrong, but we never reverse money automatically.
+    existing_prize = await prize_repository.get_by_tournament_and_user(match_result.tournament_id, match_result.user_id)
+    financial_impact_flagged = existing_prize is not None and existing_prize.payout_status == PrizePayoutStatus.PAID
+
     revision = await result_revision_repository.create(
         tournament_id=match_result.tournament_id,
         match_result_id=match_result.id,
@@ -186,8 +193,7 @@ async def correct_result(
         new_rank=tournament_result_after.rank,
         old_total_score=tournament_result_before.total_score if tournament_result_before else None,
         new_total_score=tournament_result_after.total_score,
-        # Wired up properly once prizes exist (Phase 9): flags if a PAID prize referenced this result.
-        financial_impact_flagged=False,
+        financial_impact_flagged=financial_impact_flagged,
     )
     return match_result, revision
 

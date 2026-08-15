@@ -15,6 +15,10 @@ async def list_by_user(user_id: PydanticObjectId) -> list[Prize]:
     return await Prize.find(Prize.user_id == user_id).sort(-Prize.created_at).to_list()
 
 
+async def get_by_tournament_and_user(tournament_id: PydanticObjectId, user_id: PydanticObjectId) -> Prize | None:
+    return await Prize.find_one(Prize.tournament_id == tournament_id, Prize.user_id == user_id)
+
+
 async def create(**fields) -> Prize:
     prize = Prize(**fields)
     await prize.insert()

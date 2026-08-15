@@ -6,6 +6,18 @@ PASSWORD_MIN_LENGTH = 8
 PHONE_PATTERN = re.compile(r"^\+?\d{10,15}$")
 
 
+def validate_password_strength(value: str) -> str:
+    if len(value) < PASSWORD_MIN_LENGTH:
+        raise ValueError(f"Password must be at least {PASSWORD_MIN_LENGTH} characters long.")
+    if not re.search(r"[A-Z]", value):
+        raise ValueError("Password must contain at least one uppercase letter.")
+    if not re.search(r"[a-z]", value):
+        raise ValueError("Password must contain at least one lowercase letter.")
+    if not re.search(r"\d", value):
+        raise ValueError("Password must contain at least one digit.")
+    return value
+
+
 class RegisterRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -32,15 +44,7 @@ class RegisterRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def password_strong(cls, value: str) -> str:
-        if len(value) < PASSWORD_MIN_LENGTH:
-            raise ValueError(f"Password must be at least {PASSWORD_MIN_LENGTH} characters long.")
-        if not re.search(r"[A-Z]", value):
-            raise ValueError("Password must contain at least one uppercase letter.")
-        if not re.search(r"[a-z]", value):
-            raise ValueError("Password must contain at least one lowercase letter.")
-        if not re.search(r"\d", value):
-            raise ValueError("Password must contain at least one digit.")
-        return value
+        return validate_password_strength(value)
 
 
 class LoginRequest(BaseModel):

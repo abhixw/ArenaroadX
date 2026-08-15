@@ -51,11 +51,23 @@ interface ErrorEnvelope {
   detail?: { loc?: (string | number)[]; msg?: string }[] | string;
 }
 
-interface DataEnvelope<T> {
-  data?: T;
+export interface Pagination {
+  page: number;
+  page_size: number;
+  total: number;
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+interface DataEnvelope<T> {
+  data?: T;
+  pagination?: Pagination;
+}
+
+interface Envelope<T> {
+  data: T;
+  pagination: Pagination | null;
+}
+
+async function requestEnvelope<T>(path: string, options: RequestOptions = {}): Promise<Envelope<T>> {
   let response: Response;
   try {
     response = await fetch(buildUrl(path, options.query), {
@@ -73,7 +85,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   if (response.status === 204) {
-    return undefined as T;
+    return { data: undefined as T, pagination: null };
   }
 
   const text = await response.text();
@@ -103,11 +115,23 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   const okPayload = payload as DataEnvelope<T> | null;
-  return (okPayload && "data" in okPayload ? okPayload.data : payload) as T;
+  return {
+    data: (okPayload && "data" in okPayload ? okPayload.data : payload) as T,
+    pagination: okPayload?.pagination ?? null,
+  };
+}
+
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { data } = await requestEnvelope<T>(path, options);
+  return data;
 }
 
 export const http = {
   get: <T>(path: string, query?: Record<string, QueryValue>) => request<T>(path, { method: "GET", query }),
+  // Like `get`, but also surfaces the envelope's `pagination` field instead of discarding it --
+  // use this for admin list endpoints that support page/page_size query params.
+  getPage: <T>(path: string, query?: Record<string, QueryValue>) =>
+    requestEnvelope<T[]>(path, { method: "GET", query }),
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body }),
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),

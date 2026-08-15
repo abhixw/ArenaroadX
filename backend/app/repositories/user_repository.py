@@ -14,12 +14,14 @@ async def get_by_email(email: str) -> User | None:
     return await User.find_one(User.email == email)
 
 
-async def list_all(*, search: str | None = None, limit: int = 200) -> list[User]:
+async def list_all(*, search: str | None = None, page: int = 1, page_size: int = 20) -> tuple[list[User], int]:
     query = User.find()
     if search:
         pattern = re.escape(search.strip())
         query = query.find(Or(RegEx(User.name, pattern, "i"), RegEx(User.email, pattern, "i")))
-    return await query.sort(-User.created_at).limit(limit).to_list()
+    total = await query.count()
+    items = await query.sort(-User.created_at).skip((page - 1) * page_size).limit(page_size).to_list()
+    return items, total
 
 
 async def create(

@@ -1,4 +1,4 @@
-import { http } from "@/api/client";
+import { http, type Pagination } from "@/api/client";
 
 export interface AdminPayment {
   id: string;
@@ -30,10 +30,8 @@ interface AdminPaymentDto {
   created_at: string;
 }
 
-// GET /api/admin/payments
-export async function listAllPayments(): Promise<AdminPayment[]> {
-  const dtos = await http.get<AdminPaymentDto[]>("/api/admin/payments");
-  return dtos.map((dto) => ({
+function mapPayment(dto: AdminPaymentDto): AdminPayment {
+  return {
     id: dto.id,
     userId: dto.user_id,
     playerName: dto.player_name,
@@ -46,5 +44,14 @@ export async function listAllPayments(): Promise<AdminPayment[]> {
     razorpayPaymentId: dto.razorpay_payment_id,
     status: dto.status,
     createdAt: dto.created_at,
-  }));
+  };
+}
+
+// GET /api/admin/payments
+export async function listAllPayments(page: number, pageSize: number): Promise<{ items: AdminPayment[]; pagination: Pagination | null }> {
+  const { data, pagination } = await http.getPage<AdminPaymentDto>("/api/admin/payments", {
+    page,
+    page_size: pageSize,
+  });
+  return { items: data.map(mapPayment), pagination };
 }
