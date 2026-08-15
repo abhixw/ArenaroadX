@@ -124,4 +124,13 @@ app.include_router(users.admin_router)
 
 @app.get("/", tags=["health"], summary="Health check")
 async def root() -> dict[str, str]:
-    return {"status": "ok", "service": settings.APP_NAME, "environment": settings.ENVIRONMENT}
+    # TEMP DIAGNOSTIC: masked prefix only (Key IDs aren't secret) -- to confirm what the live
+    # process actually has loaded for RAZORPAY_KEY_ID, vs. what's shown in the Render dashboard.
+    # Remove once the "Authentication failed" investigation is resolved.
+    key_prefix = settings.RAZORPAY_KEY_ID[:14] if settings.RAZORPAY_KEY_ID else None
+    return {
+        "status": "ok",
+        "service": settings.APP_NAME,
+        "environment": settings.ENVIRONMENT,
+        "razorpay_key_prefix": key_prefix,
+    }
