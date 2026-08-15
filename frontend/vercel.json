@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://arenaroadx.onrender.com/api/:path*" },
+    { "source": "/api/(.*)", "destination": "https://arenaroadx.onrender.com/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
