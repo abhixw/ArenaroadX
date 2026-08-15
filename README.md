@@ -12,8 +12,8 @@ the match, records the outcome, and enters it into the platform by hand.
 JWT auth in HTTP-only cookies, Razorpay SDK (Standard Checkout, including UPI).
 
 **Frontend** — React 19 + TypeScript, Vite, React Router, Tailwind CSS, Razorpay Checkout.js.
-Two builds from the same codebase: a player-facing site and an admin dashboard (see
-[Running two frontends](#running-two-frontends) below).
+A single app and a single deployment: the player-facing site and the admin dashboard are both
+just routes (`/admin/*`) in the same build, gated by the logged-in user's role.
 
 ## Architecture
 
@@ -28,10 +28,9 @@ business logic (validation, state transitions, orchestration). Repositories are 
 talks to MongoDB. Money is stored as integer paise throughout the backend and converted to rupees
 only at the API boundary.
 
-Frontend: plain page components under `src/pages/` (and `src/pages/admin/`), a thin typed API
-client per resource under `src/api/`, and a `VITE_APP_MODE=admin` build-time flag (see
-`frontend/.env.admin`) that swaps the player shell for the admin shell and disables registration —
-same components, same backend, two entry points.
+Frontend: plain page components under `src/pages/` (and `src/pages/admin/`) and a thin typed API
+client per resource under `src/api/`. `/admin/*` routes are wrapped in `AdminLayout`, which
+redirects any non-admin user back to `/` — that's the only gate; there's no separate build.
 
 ## How a tournament actually runs
 
@@ -121,33 +120,19 @@ enter each player's result manually as it comes in → review → publish → as
 winners → mark paid. Cancel a tournament at any point before results are published and refunds are
 generated automatically for anyone who'd paid.
 
-## Running two frontends
+## Running the frontend
 
-The player site and the admin dashboard are the same React app, built twice with different Vite
-modes so they can run side-by-side (even logged in as different accounts, in the same browser) —
-see `frontend/.env` (player) and `frontend/.env.admin` (admin, sets `VITE_APP_MODE=admin`, which
-hides/blocks registration and switches to the admin shell).
-
-```bash
-# player site
-npm run dev -- --port 5173
-
-# admin dashboard
-npm run dev -- --mode admin --port 5174
-```
-
-If you want both logged into different accounts simultaneously in the same browser (not just
-different tabs), use different hostnames instead of just different ports — cookies aren't
-port-scoped, so two ports on `localhost` share the same session. `app.localhost` / `admin.localhost`
-work out of the box in modern browsers with no `/etc/hosts` changes needed:
+One app, one dev server, one port. The player site lives at `/`, the admin dashboard at `/admin` —
+which one you see after logging in depends on your account's role, not on which URL/build you're
+running.
 
 ```bash
-npm run dev -- --host --port 5173               # http://app.localhost:5173
-npm run dev -- --host --mode admin --port 5174   # http://admin.localhost:5174
+npm run dev   # http://localhost:5173
 ```
 
-Update `CORS_ORIGINS` in the backend `.env` and `VITE_API_URL` in each frontend `.env` file to match
-whichever hostnames you use.
+Log in with a player account to see the player app; log in with an admin account (or just visit
+`/admin` directly, which bounces you to `/login` if you're not authenticated) to see the admin
+dashboard. `CORS_ORIGINS` in the backend `.env` should list this one origin.
 
 ## Project structure
 
@@ -232,11 +217,9 @@ README.md
    ```
 
 2. Copy `frontend/.env.example` to `frontend/.env` and set `VITE_API_URL` (the backend URL) and
-   `VITE_RAZORPAY_KEY_ID` (safe to expose client-side — it's the public key, not the secret). For
-   the admin build, also create `frontend/.env.admin` with `VITE_APP_MODE=admin` and its own
-   `VITE_API_URL`/`VITE_RAZORPAY_KEY_ID` if you're using separate hostnames.
+   `VITE_RAZORPAY_KEY_ID` (safe to expose client-side — it's the public key, not the secret).
 
-3. Run one or both dev servers (see [Running two frontends](#running-two-frontends)).
+3. Run the dev server (see [Running the frontend](#running-the-frontend)).
 
 ## Tests
 
@@ -251,8 +234,12 @@ against production data. Razorpay calls are mocked in tests — no real Razorpay
 
 Backend: see `.env.example` for the full list (MongoDB, JWT, Razorpay, cookie settings,
 `CORS_ORIGINS`, initial admin credentials). Frontend: see `frontend/.env.example`
-(`VITE_API_URL`, `VITE_RAZORPAY_KEY_ID`) and `frontend/.env.admin` (`VITE_APP_MODE=admin`). All
-secrets are read from the environment and are never hardcoded.
+(`VITE_API_URL`, `VITE_RAZORPAY_KEY_ID`). All secrets are read from the environment and are never
+hardcoded.
+
+`ADMIN_ORIGIN` (backend) is a leftover hook for a dual-deployment setup this project doesn't use
+anymore — leave it blank. If set, it would restrict ADMIN-role logins to one specific frontend
+origin; with a single deployment there's nothing meaningful to restrict it to.
 
 ## Deployment
 
@@ -278,28 +265,40 @@ know them — the backend rejects cross-origin requests from anything not in tha
 
 ### Frontend → Vercel
 
-Since there are two frontend builds (player + admin) from the same `frontend/` folder, create **two
-separate Vercel projects** pointing at this repo:
+One Vercel project for the whole `frontend/` folder — the player site and admin dashboard are both
+served from it, split by route (`/admin/*`) and gated by role, not by a separate build:
 
-| Setting | Player project | Admin project |
-|---|---|---|
-| Root Directory | `frontend` | `frontend` |
-| Framework Preset | Vite | Vite |
-| Build Command | `npm run build` | `npm run build -- --mode admin` |
-| Env: `VITE_API_URL` | your Render backend URL | your Render backend URL |
-| Env: `VITE_RAZORPAY_KEY_ID` | Razorpay key ID (public, safe to expose) | Razorpay key ID |
-| Env: `VITE_APP_MODE` | *(unset)* | `admin` |
+| Setting | Value |
+|---|---|
+| Root Directory | `frontend` |
+| Framework Preset | Vite |
+| Build Command | `npm run build` |
+| Env: `VITE_API_URL` | leave the value **empty** (see below) |
+| Env: `VITE_RAZORPAY_KEY_ID` | Razorpay key ID (public, safe to expose) |
 
-`frontend/vercel.json` (a SPA rewrite to `index.html`) is required for both — without it, refreshing
-on any client-side route (e.g. `/tournaments`) 404s, since React Router's routing only exists in the
-JS bundle, not as real server paths.
+`frontend/vercel.json` does two things, both required:
 
-### Cross-site cookies in production
+```json
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "https://<your-render-backend>.onrender.com/api/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
+```
 
-Locally, the `app.localhost` / `admin.localhost` trick keeps the frontend and backend on the same
-"site" so a plain `SameSite=Lax` cookie works. In production the frontend (`*.vercel.app` or a
-custom domain) and backend (`*.onrender.com`) are on genuinely different domains, so the auth
-cookie needs `COOKIE_SAMESITE=none` and `COOKIE_SECURE=true` (already set by `render.yaml`) —
-`SameSite=None` requires `Secure`, which both platforms give you HTTPS for by default, so this is
-safe. Forgetting this is the single most common reason login "works" but the session doesn't
-persist across requests once deployed.
+- The `/api/*` rule proxies API calls through Vercel's own edge to the Render backend, so from the
+  browser's point of view every request — including the auth cookie — is same-origin. This is why
+  `VITE_API_URL` is left empty: an empty value makes `src/api/client.ts` resolve API paths against
+  the current page's own origin instead of a separate backend hostname, so it hits this proxy.
+- The `/(.*)` rule is the standard SPA fallback — without it, refreshing on any client-side route
+  (e.g. `/tournaments`) 404s, since React Router's routes only exist in the JS bundle, not as real
+  server paths.
+
+### Cookies in production
+
+Because of the `/api/*` proxy above, the frontend and backend are same-origin from the browser's
+perspective even though they're on different hosts (`*.vercel.app` and `*.onrender.com`) — this
+sidesteps browsers' third-party-cookie blocking, which a bare cross-origin setup runs straight into
+regardless of `SameSite` configuration. `COOKIE_SAMESITE=none` and `COOKIE_SECURE=true` (set in
+`render.yaml`) are still required by the browser for the cookie the proxy passes through.

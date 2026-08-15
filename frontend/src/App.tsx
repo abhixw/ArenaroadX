@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Dashboard from "@/pages/Dashboard";
@@ -27,10 +27,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route
-            path="/register"
-            element={import.meta.env.VITE_APP_MODE === "admin" ? <Navigate to="/login" replace /> : <Register />}
-          />
+          <Route path="/register" element={<Register />} />
 
           <Route element={<AppLayout />}>
             <Route path="/" element={<Dashboard />} />
@@ -43,22 +40,16 @@ export default function App() {
             <Route path="/profile" element={<Profile />} />
           </Route>
 
-          {import.meta.env.VITE_APP_MODE === "admin" ? (
-            <Route element={<AdminLayout />}>
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/games" element={<AdminGames />} />
-              <Route path="/admin/tournaments" element={<AdminTournaments />} />
-              <Route path="/admin/tournaments/:id" element={<AdminTournamentDetail />} />
-              <Route path="/admin/players" element={<AdminPlayers />} />
-              <Route path="/admin/players/:id" element={<AdminPlayerDetail />} />
-              <Route path="/admin/payments" element={<AdminPayments />} />
-            </Route>
-          ) : (
-            // Admin routes don't exist on the player build at all -- this isn't the
-            // intended admin entry point (that's the separate admin deployment), so
-            // don't even let a logged-in admin land here by mistake.
-            <Route path="/admin/*" element={<Navigate to="/" replace />} />
-          )}
+          {/* AdminLayout redirects non-admins to "/" itself, so this needs no extra gating. */}
+          <Route element={<AdminLayout />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/games" element={<AdminGames />} />
+            <Route path="/admin/tournaments" element={<AdminTournaments />} />
+            <Route path="/admin/tournaments/:id" element={<AdminTournamentDetail />} />
+            <Route path="/admin/players" element={<AdminPlayers />} />
+            <Route path="/admin/players/:id" element={<AdminPlayerDetail />} />
+            <Route path="/admin/payments" element={<AdminPayments />} />
+          </Route>
 
           <Route path="*" element={<NotFound />} />
         </Routes>

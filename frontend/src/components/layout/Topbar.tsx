@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 
 interface TopbarProps {
@@ -9,9 +9,10 @@ interface TopbarProps {
 
 export function Topbar({ title, subtitle }: TopbarProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [query, setQuery] = useState("");
 
-  const tournamentsPath = import.meta.env.VITE_APP_MODE === "admin" ? "/admin/tournaments" : "/tournaments";
+  const tournamentsPath = location.pathname.startsWith("/admin") ? "/admin/tournaments" : "/tournaments";
 
   function onSearchSubmit(e: React.FormEvent) {
     e.preventDefault();

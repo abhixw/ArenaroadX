@@ -76,14 +76,12 @@ export default function Login() {
           </form>
         </div>
 
-        {import.meta.env.VITE_APP_MODE !== "admin" ? (
-          <p className="mt-4 text-center text-sm text-gray-500">
-            New here?{" "}
-            <Link to="/register" className="font-semibold text-primary-600 hover:underline">
-              Create an account
-            </Link>
-          </p>
-        ) : null}
+        <p className="mt-4 text-center text-sm text-gray-500">
+          New here?{" "}
+          <Link to="/register" className="font-semibold text-primary-600 hover:underline">
+            Create an account
+          </Link>
+        </p>
       </div>
     </div>
   );
