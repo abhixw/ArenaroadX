@@ -47,11 +47,13 @@ async def register(payload: RegisterRequest, response: Response) -> DataResponse
 )
 async def login(payload: LoginRequest, request: Request, response: Response) -> DataResponse[UserResponse]:
     user = await auth_service.authenticate_user(payload)
-    if settings.ADMIN_ORIGIN and user.role == UserRole.ADMIN:
-        origin = request.headers.get("origin")
-        if origin != settings.ADMIN_ORIGIN:
-            # Same error as wrong credentials -- don't reveal that the password was
-            # actually correct but the origin wasn't the admin site.
+    if settings.ADMIN_ORIGIN:
+        is_admin_origin = request.headers.get("origin") == settings.ADMIN_ORIGIN
+        is_admin_account = user.role == UserRole.ADMIN
+        # Full separation, both directions: admin credentials only work on the admin
+        # site, and player credentials are refused there too -- same generic error
+        # either way, so nothing about which rule tripped ever leaks to the caller.
+        if is_admin_account != is_admin_origin:
             raise InvalidCredentialsError()
     token = auth_service.issue_access_token(user)
     _set_auth_cookie(response, token)
