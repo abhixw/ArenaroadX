@@ -122,6 +122,20 @@ app.include_router(audit_logs.router)
 app.include_router(users.admin_router)
 
 
+@app.get("/debug-razorpay", tags=["health"], summary="TEMP: live Razorpay auth probe")
+async def debug_razorpay() -> dict[str, str]:
+    import razorpay
+
+    client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+    try:
+        order = client.order.create(
+            data={"amount": 100, "currency": "INR", "payment_capture": 1, "notes": {"debug": "probe"}}
+        )
+        return {"result": "SUCCESS", "order_id": order["id"]}
+    except Exception as exc:
+        return {"result": "FAILED", "error_type": type(exc).__name__, "error_message": str(exc)}
+
+
 @app.get("/", tags=["health"], summary="Health check")
 async def root() -> dict[str, str]:
     # TEMP DIAGNOSTIC: masked prefix only (Key IDs aren't secret) -- to confirm what the live
