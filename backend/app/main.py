@@ -136,4 +136,5 @@ async def root() -> dict[str, str]:
         "razorpay_key_prefix": key_prefix,
         "razorpay_secret_length": str(len(secret)) if secret else "0",
         "razorpay_secret_length_trimmed": str(len(secret.strip())) if secret else "0",
+        "razorpay_secret_last4": secret[-4:] if secret else None,
     }
