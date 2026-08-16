@@ -25,8 +25,10 @@ async def list_by_user(user_id: PydanticObjectId) -> list[Payment]:
     return await Payment.find(Payment.user_id == user_id).sort(-Payment.created_at).to_list()
 
 
-async def list_all(*, page: int = 1, page_size: int = 20) -> tuple[list[Payment], int]:
-    query = Payment.find_all()
+async def list_all(
+    *, page: int = 1, page_size: int = 20, tournament_id: PydanticObjectId | None = None
+) -> tuple[list[Payment], int]:
+    query = Payment.find(Payment.tournament_id == tournament_id) if tournament_id else Payment.find_all()
     total = await query.count()
     items = await query.sort(-Payment.created_at).skip((page - 1) * page_size).limit(page_size).to_list()
     return items, total

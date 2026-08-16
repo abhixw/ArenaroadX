@@ -72,11 +72,15 @@ async def list_my_payments(current_user: User = Depends(require_user)) -> ListRe
     return ListResponse(data=[PaymentResponse.model_validate(p, from_attributes=True) for p in payments])
 
 
-@admin_router.get("", response_model=ListResponse[AdminPaymentResponse], summary="List every payment (admin only)")
+@admin_router.get(
+    "", response_model=ListResponse[AdminPaymentResponse], summary="List every payment, optionally filtered to one tournament (admin only)"
+)
 async def list_all_payments(
-    page: int = Query(default=1, ge=1), page_size: int = Query(default=20, ge=1, le=100)
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    tournament_id: PydanticObjectId | None = Query(default=None),
 ) -> ListResponse[AdminPaymentResponse]:
-    payments, total = await payment_service.list_all_payments(page=page, page_size=page_size)
+    payments, total = await payment_service.list_all_payments(page=page, page_size=page_size, tournament_id=tournament_id)
     return ListResponse(data=payments, pagination=Pagination(page=page, page_size=page_size, total=total))
 
 

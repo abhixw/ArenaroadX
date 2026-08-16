@@ -91,6 +91,7 @@ async def list_tournament_participants(tournament_id: PydanticObjectId) -> ListR
                 user_id=r.user_id,
                 name=user.name if user else "",
                 email=user.email if user else "",
+                phone=user.phone if user else "",
                 game_uid=r.game_uid,
                 payment_status=r.payment_status,
                 registration_status=r.registration_status,

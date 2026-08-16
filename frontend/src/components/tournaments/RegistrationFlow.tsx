@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, Loader2, ShieldCheck, ShieldQuestion, XCircle } from "lucide-react";
+import { Loader2, ShieldCheck, ShieldQuestion, XCircle } from "lucide-react";
 import { Modal } from "@shared/components/ui/Modal";
 import { Button } from "@shared/components/ui/Button";
 import { useAuth } from "@shared/hooks/useAuth";
@@ -7,16 +7,12 @@ import { useCountdown } from "@/hooks/useCountdown";
 import { formatCurrency, pad2 } from "@shared/lib/utils";
 import { openRazorpayCheckout } from "@/lib/razorpay";
 import { ApiError } from "@shared/api/client";
-import {
-  getMyGameAccounts,
-  upsertGameAccountForTournament,
-  verifyGameAccountForTournament,
-} from "@/api/gameAccounts";
+import { upsertGameAccountForTournament, verifyGameAccountForTournament } from "@/api/gameAccounts";
 import { registerForTournament } from "@/api/registrations";
 import { createPaymentOrder, verifyPayment, type RazorpayOrder } from "@/api/payments";
-import type { Game, GameAccount, Registration, Tournament } from "@shared/types";
+import type { GameAccount, Game, Registration, Tournament } from "@shared/types";
 
-type Step = "account" | "confirm" | "payment" | "processing" | "success" | "failure";
+type Step = "account" | "confirm" | "payment" | "processing" | "failure";
 
 interface RegistrationFlowProps {
   open: boolean;
@@ -39,8 +35,6 @@ export function RegistrationFlow({
 }: RegistrationFlowProps) {
   const { user } = useAuth();
   const [step, setStep] = useState<Step>("account");
-  const [accounts, setAccounts] = useState<GameAccount[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [newUsername, setNewUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [registration, setRegistration] = useState<Registration | null>(null);
@@ -48,9 +42,12 @@ export function RegistrationFlow({
   const [busy, setBusy] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState<string | null>(null);
+  // Only ever set by a successful Verify call against whatever's currently typed -- cleared
+  // the instant the username changes, so a stale "Verified" badge can never linger for a
+  // now-different value the user hasn't verified.
+  const [verifiedAccount, setVerifiedAccount] = useState<GameAccount | null>(null);
 
   const reservationCountdown = useCountdown(registration?.reservationExpiresAt ?? null);
-  const selectedAccount = accounts.find((a) => a.id === selectedAccountId) ?? null;
 
   useEffect(() => {
     if (!open) return;
@@ -59,6 +56,7 @@ export function RegistrationFlow({
     setRegistration(null);
     setOrder(null);
     setNewUsername("");
+    setVerifiedAccount(null);
 
     if (resumePendingPayment) {
       setStep("payment");
@@ -71,13 +69,6 @@ export function RegistrationFlow({
     }
 
     setStep("account");
-    getMyGameAccounts()
-      .then((all) => {
-        const forGame = all.filter((a) => a.gameId === game.id);
-        setAccounts(forGame);
-        setSelectedAccountId(forGame[0]?.id ?? null);
-      })
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Could not load your game accounts."));
   }, [open, game.id, tournament.id, resumePendingPayment]);
 
   useEffect(() => {
@@ -87,30 +78,21 @@ export function RegistrationFlow({
     }
   }, [step, reservationCountdown.expired, registration]);
 
-  // Resolves whatever the user currently has typed/selected and saves it as this tournament's
-  // game account. Shared by "Continue" and "Verify", since verifying should work against
-  // whatever's currently entered without requiring a separate save step first.
-  async function saveCurrentAccountSelection(): Promise<GameAccount | null> {
+  // Saves whatever's currently typed as this tournament's game account. Shared by "Continue"
+  // and "Verify", since verifying should work against whatever's currently entered without a
+  // separate save step first.
+  async function saveCurrentUsername(): Promise<GameAccount | null> {
     const username = newUsername.trim();
-    let gameUid: string;
-    let gameUsername: string;
-    if (username) {
-      // Smash Karts (and similar) have no player-facing UID -- the in-game name is the
-      // only identifier there is, so it doubles as both fields.
-      gameUid = username;
-      gameUsername = username;
-    } else {
-      const selected = accounts.find((a) => a.id === selectedAccountId);
-      if (!selected) {
-        setError("Enter your in-game name to continue.");
-        return null;
-      }
-      gameUid = selected.gameUid;
-      gameUsername = selected.gameUsername;
+    if (!username) {
+      setError("Enter your in-game name to continue.");
+      return null;
     }
-    const account = await upsertGameAccountForTournament(tournament.id, { gameUid, gameUsername });
-    setAccounts((prev) => [...prev.filter((a) => a.id !== account.id), account]);
-    setSelectedAccountId(account.id);
+    // Smash Karts (and similar) have no player-facing UID -- the in-game name is the only
+    // identifier there is, so it doubles as both fields.
+    const account = await upsertGameAccountForTournament(tournament.id, {
+      gameUid: username,
+      gameUsername: username,
+    });
     return account;
   }
 
@@ -118,7 +100,7 @@ export function RegistrationFlow({
     setBusy(true);
     setError(null);
     try {
-      const account = await saveCurrentAccountSelection();
+      const account = await saveCurrentUsername();
       if (account) setStep("confirm");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not save your Game UID.");
@@ -131,10 +113,10 @@ export function RegistrationFlow({
     setVerifying(true);
     setVerifyError(null);
     try {
-      const saved = await saveCurrentAccountSelection();
+      const saved = await saveCurrentUsername();
       if (!saved) return;
       const verified = await verifyGameAccountForTournament(tournament.id);
-      setAccounts((prev) => [...prev.filter((a) => a.id !== verified.id), verified]);
+      setVerifiedAccount(verified);
     } catch (e) {
       setVerifyError(e instanceof ApiError ? e.message : "Could not verify this username.");
     } finally {
@@ -186,12 +168,10 @@ export function RegistrationFlow({
         razorpayPaymentId: checkoutResult.razorpay_payment_id,
         razorpaySignature: checkoutResult.razorpay_signature,
       });
-      setStep("success");
-      // Refresh the parent page's data as soon as the payment is actually confirmed, not only
-      // when the user clicks "Done" -- if they close the modal (or navigate away) during the
-      // brief verification window, that click never happens and the page is left showing
-      // stale "Complete Payment" state even though the payment succeeded on the backend.
+      // No separate "success" confirmation screen -- close straight back to the tournament
+      // page, which onSuccess() has just refreshed to show the now-unlocked Proceed button.
       onSuccess();
+      onClose();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "We couldn't verify your payment.");
       setStep("failure");
@@ -219,54 +199,34 @@ export function RegistrationFlow({
             name, so double-check it before continuing.
           </p>
 
-          {accounts.length > 0 ? (
-            <div className="space-y-2">
-              {accounts.map((a) => (
-                <label
-                  key={a.id}
-                  className="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-200 p-3 has-[:checked]:border-primary-400 has-[:checked]:bg-primary-50/60"
-                >
-                  <input
-                    type="radio"
-                    name="account"
-                    checked={selectedAccountId === a.id}
-                    onChange={() => setSelectedAccountId(a.id)}
-                    className="accent-[#7c5cff]"
-                  />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">{a.gameUsername}</p>
-                  </div>
-                  {a.verifiedAt ? (
-                    <ShieldCheck size={16} className="ml-auto text-success-500" />
-                  ) : null}
-                </label>
-              ))}
-            </div>
-          ) : (
-            <p className="rounded-xl bg-warning-50 px-3 py-2.5 text-xs text-warning-600">
-              You don't have a saved {game.name} account yet. Add one below to continue.
-            </p>
-          )}
-
-          <div className="rounded-xl border border-dashed border-gray-200 p-3">
-            <p className="text-xs font-semibold text-gray-500">
-              {game.integrationKey === "chess_com" ? "Or use a different Chess.com username" : "Or use a different in-game name"}
-            </p>
+          <div>
+            <label className="text-xs font-semibold text-gray-500">
+              {game.integrationKey === "chess_com" ? "Chess.com username" : "In-game name"}
+            </label>
             <input
               value={newUsername}
-              onChange={(e) => setNewUsername(e.target.value)}
+              onChange={(e) => {
+                setNewUsername(e.target.value);
+                setVerifiedAccount(null);
+              }}
               placeholder={game.integrationKey === "chess_com" ? "Chess.com username" : "In-game name"}
-              className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
+              // Every player registering sees this field -- must never suggest a value the
+              // browser remembers from a *different* account having typed into it before.
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
             />
           </div>
 
           {game.integrationKey === "chess_com" ? (
             <div className="rounded-xl bg-app-bg p-3">
-              {selectedAccount?.verifiedAt ? (
+              {verifiedAccount?.verifiedAt ? (
                 <p className="flex items-center gap-1.5 text-xs font-semibold text-success-600">
                   <ShieldCheck size={14} /> Verified on Chess.com
-                  {typeof selectedAccount.providerData.title === "string"
-                    ? ` — titled ${selectedAccount.providerData.title}`
+                  {typeof verifiedAccount.providerData.title === "string"
+                    ? ` — titled ${verifiedAccount.providerData.title}`
                     : ""}
                 </p>
               ) : (
@@ -279,7 +239,7 @@ export function RegistrationFlow({
                     variant="outline"
                     size="sm"
                     className="mt-2"
-                    disabled={verifying}
+                    disabled={verifying || !newUsername.trim()}
                     onClick={handleVerify}
                   >
                     {verifying ? <Loader2 size={14} className="animate-spin" /> : "Verify with Chess.com"}
@@ -379,25 +339,6 @@ export function RegistrationFlow({
         <div className="flex flex-col items-center gap-3 py-10">
           <Loader2 size={28} className="animate-spin text-primary-500" />
           <p className="text-sm text-gray-500">Verifying payment with the server…</p>
-        </div>
-      ) : null}
-
-      {step === "success" ? (
-        <div className="flex flex-col items-center gap-3 py-6 text-center">
-          <CheckCircle2 size={40} className="text-success-500" />
-          <p className="text-lg font-bold text-gray-900">Registration confirmed!</p>
-          <p className="text-sm text-gray-500">
-            You're locked in for {tournament.name}. Room details will appear here before the match.
-          </p>
-          <Button
-            className="mt-2 w-full"
-            onClick={() => {
-              onSuccess();
-              onClose();
-            }}
-          >
-            Done
-          </Button>
         </div>
       ) : null}
 

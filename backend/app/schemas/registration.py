@@ -38,6 +38,7 @@ class ParticipantResponse(BaseModel):
     user_id: PydanticObjectId
     name: str
     email: str
+    phone: str
     game_uid: str
     payment_status: RegistrationPaymentStatus
     registration_status: RegistrationStatus

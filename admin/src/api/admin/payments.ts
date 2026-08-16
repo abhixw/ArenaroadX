@@ -5,6 +5,7 @@ export interface AdminPayment {
   userId: string;
   playerName: string;
   playerEmail: string;
+  playerPhone: string;
   tournamentId: string;
   tournamentName: string;
   amount: number; // rupees
@@ -20,6 +21,7 @@ interface AdminPaymentDto {
   user_id: string;
   player_name: string;
   player_email: string;
+  player_phone: string;
   tournament_id: string;
   tournament_name: string;
   amount_paise: number;
@@ -36,6 +38,7 @@ function mapPayment(dto: AdminPaymentDto): AdminPayment {
     userId: dto.user_id,
     playerName: dto.player_name,
     playerEmail: dto.player_email,
+    playerPhone: dto.player_phone,
     tournamentId: dto.tournament_id,
     tournamentName: dto.tournament_name,
     amount: dto.amount_paise / 100,
@@ -47,11 +50,16 @@ function mapPayment(dto: AdminPaymentDto): AdminPayment {
   };
 }
 
-// GET /api/admin/payments
-export async function listAllPayments(page: number, pageSize: number): Promise<{ items: AdminPayment[]; pagination: Pagination | null }> {
+// GET /api/admin/payments?tournament_id=... -- omit tournamentId to list every payment.
+export async function listAllPayments(
+  page: number,
+  pageSize: number,
+  tournamentId?: string,
+): Promise<{ items: AdminPayment[]; pagination: Pagination | null }> {
   const { data, pagination } = await http.getPage<AdminPaymentDto>("/api/admin/payments", {
     page,
     page_size: pageSize,
+    tournament_id: tournamentId,
   });
   return { items: data.map(mapPayment), pagination };
 }

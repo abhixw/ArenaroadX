@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Search, X } from "lucide-react";
 import { Topbar } from "@shared/components/layout/Topbar";
 import { Card } from "@shared/components/ui/Card";
 import { Skeleton } from "@shared/components/ui/Skeleton";
@@ -24,10 +25,20 @@ const PAGE_SIZE = 20;
 export default function AdminPayments() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const { data: result, loading, error, refetch } = useAsyncData(() => listAllPayments(page, PAGE_SIZE), [page]);
+  const [searchParams] = useSearchParams();
+  const tournamentId = searchParams.get("tournament_id") ?? undefined;
+
+  useEffect(() => {
+    setPage(1);
+  }, [tournamentId]);
+
+  const { data: result, loading, error, refetch } = useAsyncData(
+    () => listAllPayments(page, PAGE_SIZE, tournamentId),
+    [page, tournamentId],
+  );
 
   // Search only filters within the currently loaded page -- the payments list has no
-  // server-side search (unlike players), so this stays a client-side page-local filter.
+  // server-side text search (unlike players), so this stays a client-side page-local filter.
   const filtered = (result?.items ?? []).filter((p) => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
@@ -38,10 +49,28 @@ export default function AdminPayments() {
       p.razorpayOrderId.toLowerCase().includes(q)
     );
   });
+  const filteredTournamentName = tournamentId ? filtered[0]?.tournamentName ?? result?.items[0]?.tournamentName : undefined;
 
   return (
     <div>
-      <Topbar title="Payments" subtitle="Every entry-fee payment across all tournaments." />
+      <Topbar
+        title="Payments"
+        subtitle={tournamentId ? `Payments for ${filteredTournamentName ?? "this tournament"}.` : "Every entry-fee payment across all tournaments."}
+      />
+
+      {tournamentId ? (
+        <Card className="mb-4 flex items-center justify-between p-3">
+          <p className="text-xs text-gray-500">
+            Showing only <span className="font-semibold text-gray-800">{filteredTournamentName ?? "this tournament"}</span>
+          </p>
+          <Link
+            to="/admin/payments"
+            className="flex items-center gap-1 text-xs font-semibold text-primary-600 hover:underline"
+          >
+            <X size={12} /> Clear filter
+          </Link>
+        </Card>
+      ) : null}
 
       <Card className="p-4">
         <div className="relative">
@@ -78,6 +107,7 @@ export default function AdminPayments() {
                 <thead>
                   <tr className="border-b border-gray-100 bg-app-bg/60 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
                     <th className="px-5 py-3">Player</th>
+                    <th className="px-5 py-3">Phone</th>
                     <th className="px-5 py-3">Tournament</th>
                     <th className="px-5 py-3">Amount</th>
                     <th className="px-5 py-3">Status</th>
@@ -92,6 +122,7 @@ export default function AdminPayments() {
                         <p className="font-medium text-gray-800">{p.playerName}</p>
                         <p className="text-xs text-gray-400">{p.playerEmail}</p>
                       </td>
+                      <td className="px-5 py-3.5 text-gray-500">{p.playerPhone || "—"}</td>
                       <td className="px-5 py-3.5 text-gray-600">{p.tournamentName}</td>
                       <td className="px-5 py-3.5 font-semibold text-gray-800">{formatCurrency(p.amount)}</td>
                       <td className="px-5 py-3.5">

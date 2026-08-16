@@ -9,7 +9,6 @@ import type {
   PlayerHistoryEntry,
   Refund,
   ScoringRule,
-  Transaction,
   TournamentResult,
 } from "@/types/admin";
 import type { Match, MatchStatus, PaymentStatus, Prize, RegistrationStatus, User } from "@shared/types";
@@ -181,6 +180,7 @@ export interface ParticipantDto {
   user_id: string;
   name: string;
   email: string;
+  phone: string;
   game_uid: string;
   payment_status: "PENDING" | "CAPTURED" | "FAILED" | "REFUNDED";
   registration_status: "PENDING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "DISQUALIFIED" | "EXPIRED";
@@ -192,6 +192,7 @@ export function mapParticipant(dto: ParticipantDto): Participant {
     userId: toId(dto.user_id),
     name: dto.name,
     email: dto.email,
+    phone: dto.phone,
     gameUid: dto.game_uid,
     paymentStatus: PAYMENT_STATUS_MAP[dto.payment_status] as PaymentStatus,
     registrationStatus: REGISTRATION_STATUS_MAP[dto.registration_status] as RegistrationStatus,
@@ -290,28 +291,3 @@ export function mapRefund(dto: RefundDto): Refund {
   };
 }
 
-// ---- transactions (ledger) ----
-
-export interface TransactionDto {
-  id: string;
-  tournament_id: string;
-  user_id: string;
-  type: Transaction["type"];
-  amount: number | string;
-  reference_id: string | null;
-  note: string | null;
-  created_at: string;
-}
-
-export function mapTransaction(dto: TransactionDto): Transaction {
-  return {
-    id: toId(dto.id),
-    tournamentId: toId(dto.tournament_id),
-    userId: toId(dto.user_id),
-    type: dto.type,
-    amount: Number(dto.amount),
-    referenceId: dto.reference_id ? toId(dto.reference_id) : null,
-    note: dto.note,
-    createdAt: dto.created_at,
-  };
-}

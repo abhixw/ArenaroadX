@@ -41,6 +41,7 @@ export function AdminParticipantsTab({ tournament }: { tournament: Tournament })
               <thead>
                 <tr className="border-b border-gray-100 text-left text-xs font-semibold uppercase text-gray-400">
                   <th className="py-2">Player</th>
+                  <th className="py-2">Phone</th>
                   <th className="py-2">Game UID</th>
                   <th className="py-2">Payment</th>
                   <th className="py-2">Status</th>
@@ -56,6 +57,7 @@ export function AdminParticipantsTab({ tournament }: { tournament: Tournament })
                       </Link>
                       <p className="text-xs text-gray-400">{p.email}</p>
                     </td>
+                    <td className="py-2.5 text-gray-500">{p.phone || "—"}</td>
                     <td className="py-2.5 text-gray-600">{p.gameUid}</td>
                     <td className="py-2.5">
                       <PaymentStatusBadge status={p.paymentStatus} />

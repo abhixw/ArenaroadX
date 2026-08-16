@@ -69,6 +69,7 @@ export interface Participant {
   userId: string;
   name: string;
   email: string;
+  phone: string;
   gameUid: string;
   paymentStatus: PaymentStatus;
   registrationStatus: RegistrationStatus;
@@ -106,15 +107,3 @@ export interface Refund {
   createdAt: string;
 }
 
-export type TransactionType = "ENTRY_FEE" | "REFUND" | "PRIZE" | "ADJUSTMENT";
-
-export interface Transaction {
-  id: string;
-  tournamentId: string;
-  userId: string;
-  type: TransactionType;
-  amount: number;
-  referenceId: string | null;
-  note: string | null;
-  createdAt: string;
-}

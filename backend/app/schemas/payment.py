@@ -48,6 +48,7 @@ class AdminPaymentResponse(BaseModel):
     user_id: PydanticObjectId
     player_name: str
     player_email: str
+    player_phone: str
     tournament_id: PydanticObjectId
     tournament_name: str
     amount_paise: int

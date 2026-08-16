@@ -1,6 +1,6 @@
 import { http } from "@shared/api/client";
-import { mapRefund, mapTransaction, type RefundDto, type TransactionDto } from "@/lib/adminMappers";
-import type { Refund, Transaction } from "@/types/admin";
+import { mapRefund, type RefundDto } from "@/lib/adminMappers";
+import type { Refund } from "@/types/admin";
 
 // GET /api/admin/tournaments/{id}/refunds
 export async function listRefunds(tournamentId: string): Promise<Refund[]> {
@@ -14,10 +14,4 @@ export async function processRefund(refundId: string, providerReference: string)
     provider_reference: providerReference,
   });
   return mapRefund(dto);
-}
-
-// GET /api/admin/tournaments/{id}/ledger
-export async function getLedger(tournamentId: string): Promise<Transaction[]> {
-  const dtos = await http.get<TransactionDto[]>(`/api/admin/tournaments/${tournamentId}/ledger`);
-  return dtos.map(mapTransaction);
 }

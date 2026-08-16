@@ -13,9 +13,8 @@ import { AdminMatchesTab } from "@/components/admin/tournament/AdminMatchesTab";
 import { AdminResultsTab } from "@/components/admin/tournament/AdminResultsTab";
 import { AdminParticipantsTab } from "@/components/admin/tournament/AdminParticipantsTab";
 import { AdminPrizesTab } from "@/components/admin/tournament/AdminPrizesTab";
-import { AdminLedgerTab } from "@/components/admin/tournament/AdminLedgerTab";
 
-type Tab = "overview" | "matches" | "results" | "participants" | "prizes" | "ledger";
+type Tab = "overview" | "matches" | "results" | "participants" | "prizes";
 
 const TABS: { value: Tab; label: string }[] = [
   { value: "overview", label: "Overview" },
@@ -23,7 +22,6 @@ const TABS: { value: Tab; label: string }[] = [
   { value: "results", label: "Results" },
   { value: "participants", label: "Participants" },
   { value: "prizes", label: "Prizes & Refunds" },
-  { value: "ledger", label: "Ledger" },
 ];
 
 export default function AdminTournamentDetail() {
@@ -74,7 +72,6 @@ export default function AdminTournamentDetail() {
       {tab === "results" ? <AdminResultsTab tournament={tournament} /> : null}
       {tab === "participants" ? <AdminParticipantsTab tournament={tournament} /> : null}
       {tab === "prizes" ? <AdminPrizesTab tournament={tournament} /> : null}
-      {tab === "ledger" ? <AdminLedgerTab tournament={tournament} /> : null}
     </div>
   );
 }

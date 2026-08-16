@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { CalendarDays, Clock, Coins, ExternalLink, Trophy, Users } from "lucide-react";
+import { CalendarDays, Clock, Coins, ExternalLink, Lock, Trophy, Users } from "lucide-react";
 import { Topbar } from "@shared/components/layout/Topbar";
 import { Card } from "@shared/components/ui/Card";
 import { Button } from "@shared/components/ui/Button";
@@ -12,11 +12,12 @@ import { LeaderboardTable } from "@/components/leaderboard/LeaderboardTable";
 import { RegistrationFlow } from "@/components/tournaments/RegistrationFlow";
 import { useAuth } from "@shared/hooks/useAuth";
 import { useAsyncData } from "@shared/hooks/useAsyncData";
+import { useCountdown } from "@/hooks/useCountdown";
 import { getTournament } from "@shared/api/tournaments";
 import { getGame } from "@shared/api/games";
 import { getRegistrationForTournament } from "@/api/registrations";
 import { getLeaderboard } from "@/api/results";
-import { formatCurrency, formatDateTime } from "@shared/lib/utils";
+import { formatCurrency, formatDateTime, pad2 } from "@shared/lib/utils";
 
 const PUBLISHED_STATUSES = ["RESULTS_PUBLISHED", "COMPLETED"];
 
@@ -41,6 +42,7 @@ export default function TournamentDetails() {
 
   const isConfirmed = registration?.status === "CONFIRMED";
   const isReserved = registration?.status === "RESERVED";
+  const matchCountdown = useCountdown(tournament?.startsAt ?? null);
 
   if (!loading && !error && !tournament) {
     return <Navigate to="/tournaments" replace />;
@@ -179,12 +181,43 @@ export default function TournamentDetails() {
                 Complete Payment
               </Button>
             ) : null}
+            {/* Payment is the first gate to this link; the match's start time is the second --
+                even a paid player can't click through before the admin-set start_time arrives. */}
             {tournament.gameUrl ? (
-              <a href={tournament.gameUrl} target="_blank" rel="noreferrer" className="mt-3 block">
-                <Button variant="outline" className="w-full gap-2">
-                  Visit Website <ExternalLink size={14} />
-                </Button>
-              </a>
+              isConfirmed && matchCountdown.expired ? (
+                <a href={tournament.gameUrl} target="_blank" rel="noreferrer" className="mt-3 block">
+                  <Button variant="success" className="w-full gap-2">
+                    Proceed <ExternalLink size={14} />
+                  </Button>
+                </a>
+              ) : (
+                <>
+                  {isConfirmed ? (
+                    <div className="mt-3 rounded-xl bg-warning-50 px-3 py-2.5">
+                      <p className="text-xs font-medium text-warning-600">
+                        Still time left before the match starts.
+                      </p>
+                      <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+                        {[
+                          { label: "HR", value: matchCountdown.hours + matchCountdown.days * 24 },
+                          { label: "MIN", value: matchCountdown.minutes },
+                          { label: "SEC", value: matchCountdown.seconds },
+                        ].map((unit) => (
+                          <div key={unit.label} className="rounded-xl bg-white py-2">
+                            <p className="text-lg font-extrabold tabular-nums text-gray-900">
+                              {pad2(unit.value)}
+                            </p>
+                            <p className="text-[10px] font-semibold text-gray-400">{unit.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  <Button variant="outline" className="mt-3 w-full gap-2" disabled>
+                    <Lock size={14} /> Proceed
+                  </Button>
+                </>
+              )
             ) : null}
           </Card>
         </div>
