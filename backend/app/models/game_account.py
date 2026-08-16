@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from beanie import PydanticObjectId
 from pymongo import ASCENDING, IndexModel
@@ -12,6 +13,11 @@ class GameAccount(BaseDocument):
     game_uid: str
     game_username: str | None = None
     verified_at: datetime | None = None
+    # Populated only for games with a Game.integration_key (see app.integrations) -- the
+    # provider's own player id and a snapshot of whatever public profile data their API
+    # returned at verification time. Generic across providers by design.
+    provider_player_id: str | None = None
+    provider_data: dict[str, Any] = {}
 
     class Settings:
         name = "game_accounts"

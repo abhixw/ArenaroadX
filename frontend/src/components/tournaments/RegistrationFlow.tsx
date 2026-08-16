@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, Loader2, ShieldCheck, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, ShieldCheck, ShieldQuestion, XCircle } from "lucide-react";
 import { Modal } from "@shared/components/ui/Modal";
 import { Button } from "@shared/components/ui/Button";
 import { useAuth } from "@shared/hooks/useAuth";
@@ -7,7 +7,11 @@ import { useCountdown } from "@/hooks/useCountdown";
 import { formatCurrency, pad2 } from "@shared/lib/utils";
 import { openRazorpayCheckout } from "@/lib/razorpay";
 import { ApiError } from "@shared/api/client";
-import { getMyGameAccounts, upsertGameAccountForTournament } from "@/api/gameAccounts";
+import {
+  getMyGameAccounts,
+  upsertGameAccountForTournament,
+  verifyGameAccountForTournament,
+} from "@/api/gameAccounts";
 import { registerForTournament } from "@/api/registrations";
 import { createPaymentOrder, verifyPayment, type RazorpayOrder } from "@/api/payments";
 import type { Game, GameAccount, Registration, Tournament } from "@shared/types";
@@ -42,12 +46,16 @@ export function RegistrationFlow({
   const [registration, setRegistration] = useState<Registration | null>(null);
   const [order, setOrder] = useState<RazorpayOrder | null>(null);
   const [busy, setBusy] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   const reservationCountdown = useCountdown(registration?.reservationExpiresAt ?? null);
+  const selectedAccount = accounts.find((a) => a.id === selectedAccountId) ?? null;
 
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setVerifyError(null);
     setRegistration(null);
     setOrder(null);
     setNewUsername("");
@@ -79,39 +87,58 @@ export function RegistrationFlow({
     }
   }, [step, reservationCountdown.expired, registration]);
 
+  // Resolves whatever the user currently has typed/selected and saves it as this tournament's
+  // game account. Shared by "Continue" and "Verify", since verifying should work against
+  // whatever's currently entered without requiring a separate save step first.
+  async function saveCurrentAccountSelection(): Promise<GameAccount | null> {
+    const username = newUsername.trim();
+    let gameUid: string;
+    let gameUsername: string;
+    if (username) {
+      // Smash Karts (and similar) have no player-facing UID -- the in-game name is the
+      // only identifier there is, so it doubles as both fields.
+      gameUid = username;
+      gameUsername = username;
+    } else {
+      const selected = accounts.find((a) => a.id === selectedAccountId);
+      if (!selected) {
+        setError("Enter your in-game name to continue.");
+        return null;
+      }
+      gameUid = selected.gameUid;
+      gameUsername = selected.gameUsername;
+    }
+    const account = await upsertGameAccountForTournament(tournament.id, { gameUid, gameUsername });
+    setAccounts((prev) => [...prev.filter((a) => a.id !== account.id), account]);
+    setSelectedAccountId(account.id);
+    return account;
+  }
+
   async function handleContinueFromAccount() {
     setBusy(true);
     setError(null);
     try {
-      const username = newUsername.trim();
-      let gameUid: string;
-      let gameUsername: string;
-      if (username) {
-        // Smash Karts (and similar) have no player-facing UID -- the in-game name is the
-        // only identifier there is, so it doubles as both fields.
-        gameUid = username;
-        gameUsername = username;
-      } else {
-        const selected = accounts.find((a) => a.id === selectedAccountId);
-        if (!selected) {
-          setError("Enter your in-game name to continue.");
-          setBusy(false);
-          return;
-        }
-        gameUid = selected.gameUid;
-        gameUsername = selected.gameUsername;
-      }
-      const account = await upsertGameAccountForTournament(tournament.id, { gameUid, gameUsername });
-      setAccounts((prev) => {
-        const withoutOld = prev.filter((a) => a.id !== account.id);
-        return [...withoutOld, account];
-      });
-      setSelectedAccountId(account.id);
-      setStep("confirm");
+      const account = await saveCurrentAccountSelection();
+      if (account) setStep("confirm");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not save your Game UID.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleVerify() {
+    setVerifying(true);
+    setVerifyError(null);
+    try {
+      const saved = await saveCurrentAccountSelection();
+      if (!saved) return;
+      const verified = await verifyGameAccountForTournament(tournament.id);
+      setAccounts((prev) => [...prev.filter((a) => a.id !== verified.id), verified]);
+    } catch (e) {
+      setVerifyError(e instanceof ApiError ? e.message : "Could not verify this username.");
+    } finally {
+      setVerifying(false);
     }
   }
 
@@ -222,14 +249,46 @@ export function RegistrationFlow({
           )}
 
           <div className="rounded-xl border border-dashed border-gray-200 p-3">
-            <p className="text-xs font-semibold text-gray-500">Or use a different in-game name</p>
+            <p className="text-xs font-semibold text-gray-500">
+              {game.integrationKey === "chess_com" ? "Or use a different Chess.com username" : "Or use a different in-game name"}
+            </p>
             <input
               value={newUsername}
               onChange={(e) => setNewUsername(e.target.value)}
-              placeholder="In-game name"
+              placeholder={game.integrationKey === "chess_com" ? "Chess.com username" : "In-game name"}
               className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
             />
           </div>
+
+          {game.integrationKey === "chess_com" ? (
+            <div className="rounded-xl bg-app-bg p-3">
+              {selectedAccount?.verifiedAt ? (
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-success-600">
+                  <ShieldCheck size={14} /> Verified on Chess.com
+                  {typeof selectedAccount.providerData.title === "string"
+                    ? ` — titled ${selectedAccount.providerData.title}`
+                    : ""}
+                </p>
+              ) : (
+                <>
+                  <p className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <ShieldQuestion size={14} /> Not verified yet — we check this username actually exists on
+                    Chess.com.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    disabled={verifying}
+                    onClick={handleVerify}
+                  >
+                    {verifying ? <Loader2 size={14} className="animate-spin" /> : "Verify with Chess.com"}
+                  </Button>
+                </>
+              )}
+              {verifyError ? <p className="mt-2 text-xs font-medium text-danger-600">{verifyError}</p> : null}
+            </div>
+          ) : null}
 
           {error ? <p className="text-xs font-medium text-danger-600">{error}</p> : null}
 

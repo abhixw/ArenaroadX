@@ -34,3 +34,10 @@ export async function upsertGameAccountForTournament(
   });
   return mapGameAccount(dto);
 }
+
+// POST /api/tournaments/{id}/game-account/verify -- confirms the saved game_uid against the
+// game's linked provider (e.g. Chess.com), only available when Game.integrationKey is set.
+export async function verifyGameAccountForTournament(tournamentId: string): Promise<GameAccount> {
+  const dto = await http.post<GameAccountDto>(`/api/tournaments/${tournamentId}/game-account/verify`);
+  return mapGameAccount(dto);
+}

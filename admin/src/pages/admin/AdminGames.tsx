@@ -95,6 +95,7 @@ function EditGameModal({
   const [imageUrl, setImageUrl] = useState(game?.imageUrl ?? "");
   const [gameType, setGameType] = useState<string>(game?.gameType ?? "BATTLE_ROYALE");
   const [isActive, setIsActive] = useState(game?.isActive ?? true);
+  const [integrationKey, setIntegrationKey] = useState<string>(game?.integrationKey ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -105,7 +106,7 @@ function EditGameModal({
     }
     setBusy(true);
     setError(null);
-    const input: GameInput = { name: name.trim(), description, imageUrl, gameType };
+    const input: GameInput = { name: name.trim(), description, imageUrl, gameType, integrationKey };
     try {
       if (game) await updateGame(game.id, { ...input, isActive });
       else await createGame(input);
@@ -157,6 +158,17 @@ function EditGameModal({
             <option value="STRATEGY">Strategy</option>
             <option value="RACING">Racing</option>
             <option value="SHOOTER">Shooter</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-gray-500">Account Verification Provider</label>
+          <select
+            value={integrationKey}
+            onChange={(e) => setIntegrationKey(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary-400"
+          >
+            <option value="">None — players enter any in-game name</option>
+            <option value="chess_com">Chess.com — players' usernames are verified against chess.com</option>
           </select>
         </div>
         {game ? (

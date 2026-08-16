@@ -21,8 +21,11 @@ async def create(
     description: str | None,
     image_url: str | None,
     game_type: str | None,
+    integration_key: str | None = None,
 ) -> Game:
-    game = Game(name=name, description=description, image_url=image_url, game_type=game_type)
+    game = Game(
+        name=name, description=description, image_url=image_url, game_type=game_type, integration_key=integration_key
+    )
     await game.insert()
     return game
 

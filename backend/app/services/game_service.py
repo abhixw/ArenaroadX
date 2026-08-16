@@ -28,6 +28,7 @@ async def create_game(payload: GameCreate) -> Game:
         description=payload.description,
         image_url=str(payload.image_url) if payload.image_url else None,
         game_type=payload.game_type,
+        integration_key=payload.integration_key,
     )
 
 

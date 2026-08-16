@@ -420,3 +420,27 @@ class CancellationReasonRequiredError(AppError):
 
     def __init__(self, message: str = "A reason is required to cancel a tournament.") -> None:
         super().__init__(message)
+
+
+class IntegrationNotSupportedError(AppError):
+    status_code = status.HTTP_400_BAD_REQUEST
+    error_code = "INTEGRATION_NOT_SUPPORTED"
+
+    def __init__(self, message: str = "This game has no linked account provider to verify against.") -> None:
+        super().__init__(message)
+
+
+class ProviderPlayerNotFoundError(AppError):
+    status_code = status.HTTP_404_NOT_FOUND
+    error_code = "PROVIDER_PLAYER_NOT_FOUND"
+
+    def __init__(self, message: str = "No account with this username was found on the provider's site.") -> None:
+        super().__init__(message)
+
+
+class IntegrationUnavailableError(AppError):
+    status_code = status.HTTP_502_BAD_GATEWAY
+    error_code = "INTEGRATION_UNAVAILABLE"
+
+    def __init__(self, message: str = "The account provider is temporarily unavailable. Try again shortly.") -> None:
+        super().__init__(message)

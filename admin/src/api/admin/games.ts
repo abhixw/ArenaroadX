@@ -7,6 +7,9 @@ export interface GameInput {
   description?: string;
   imageUrl?: string;
   gameType?: string;
+  // e.g. "chess_com" -- lets players verify their in-game account against a real provider.
+  // Empty/undefined means no integration (the original manual-UID-only flow).
+  integrationKey?: string;
 }
 
 function toPayload(input: GameInput) {
@@ -15,6 +18,7 @@ function toPayload(input: GameInput) {
     description: input.description || undefined,
     image_url: input.imageUrl || undefined,
     game_type: input.gameType || undefined,
+    integration_key: input.integrationKey || undefined,
   };
 }
 
@@ -41,6 +45,7 @@ export async function updateGame(
     ...(input.imageUrl !== undefined ? { image_url: input.imageUrl || null } : {}),
     ...(input.gameType !== undefined ? { game_type: input.gameType || null } : {}),
     ...(input.isActive !== undefined ? { is_active: input.isActive } : {}),
+    ...(input.integrationKey !== undefined ? { integration_key: input.integrationKey || null } : {}),
   });
   return mapGame(dto);
 }

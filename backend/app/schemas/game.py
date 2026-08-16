@@ -11,6 +11,9 @@ class GameCreate(BaseModel):
     description: str | None = Field(default=None, max_length=2000)
     image_url: HttpUrl | None = None
     game_type: str | None = Field(default=None, max_length=50)
+    # e.g. "chess_com" -- must be a key in app.integrations.REGISTRY. None (the default)
+    # means this game has no provider integration; game accounts are UID-only.
+    integration_key: str | None = Field(default=None, max_length=50)
 
     @field_validator("name")
     @classmethod
@@ -29,6 +32,7 @@ class GameUpdate(BaseModel):
     image_url: HttpUrl | None = None
     game_type: str | None = Field(default=None, max_length=50)
     is_active: bool | None = None
+    integration_key: str | None = Field(default=None, max_length=50)
 
     @field_validator("name")
     @classmethod
@@ -50,5 +54,6 @@ class GameResponse(BaseModel):
     image_url: str | None
     game_type: str | None
     is_active: bool
+    integration_key: str | None
     created_at: datetime
     updated_at: datetime

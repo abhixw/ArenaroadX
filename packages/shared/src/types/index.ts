@@ -23,6 +23,8 @@ export interface Game {
   imageUrl: string;
   gameType: GameType;
   isActive: boolean;
+  // e.g. "chess_com" -- set only for games with a linked account-verification provider.
+  integrationKey: string | null;
 }
 
 export interface GameAccount {
@@ -33,6 +35,8 @@ export interface GameAccount {
   gameUsername: string;
   verifiedAt: string | null;
   lockedAt: string | null;
+  providerPlayerId: string | null;
+  providerData: Record<string, unknown>;
 }
 
 export type TournamentStatus =

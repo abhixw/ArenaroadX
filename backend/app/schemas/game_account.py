@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from beanie import PydanticObjectId
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -28,5 +29,7 @@ class GameAccountResponse(BaseModel):
     game_uid: str
     game_username: str | None
     verified_at: datetime | None
+    provider_player_id: str | None
+    provider_data: dict[str, Any]
     created_at: datetime
     updated_at: datetime

@@ -59,6 +59,7 @@ export interface GameDto {
   image_url: string | null;
   game_type: string | null;
   is_active: boolean;
+  integration_key: string | null;
 }
 
 const KNOWN_GAME_TYPES = new Set(["BATTLE_ROYALE", "STRATEGY", "RACING", "SHOOTER"]);
@@ -72,6 +73,7 @@ export function mapGame(dto: GameDto): Game {
     imageUrl: dto.image_url ?? "",
     gameType: (KNOWN_GAME_TYPES.has(dto.game_type ?? "") ? dto.game_type : "BATTLE_ROYALE") as Game["gameType"],
     isActive: dto.is_active,
+    integrationKey: dto.integration_key,
   };
 }
 
@@ -84,6 +86,8 @@ export interface GameAccountDto {
   game_uid: string;
   game_username: string | null;
   verified_at: string | null;
+  provider_player_id: string | null;
+  provider_data: Record<string, unknown>;
 }
 
 export function mapGameAccount(dto: GameAccountDto): GameAccount {
@@ -97,6 +101,8 @@ export function mapGameAccount(dto: GameAccountDto): GameAccount {
     // The backend has no stored "locked" flag -- lock state is only enforced (and
     // discovered) at write time via a GAME_ACCOUNT_LOCKED error from the registration flow.
     lockedAt: null,
+    providerPlayerId: dto.provider_player_id,
+    providerData: dto.provider_data,
   };
 }
 
