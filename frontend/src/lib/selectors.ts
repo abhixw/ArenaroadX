@@ -1,6 +1,6 @@
-import type { MyTournamentEntry } from "@/lib/mappers";
-import type { Tournament } from "@/types";
-import { formatDate } from "@/lib/utils";
+import type { MyTournamentEntry } from "@shared/lib/mappers";
+import type { Tournament } from "@shared/types";
+import { formatDate } from "@shared/lib/utils";
 
 const UPCOMING_STATUSES: Tournament["status"][] = [
   "DRAFT",

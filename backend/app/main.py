@@ -6,9 +6,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.audit_middleware import AuditLogMiddleware
-from app.core.config import settings
+from app.core.config import settings, validate_production_config
 from app.core.database import init_db
 from app.core.exceptions import AppError
+from app.core.security_headers_middleware import SecurityHeadersMiddleware
 from app.models import ALL_DOCUMENT_MODELS
 from app.routers import (
     audit_logs,
@@ -32,6 +33,12 @@ logger = logging.getLogger("tournament_backend")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    problems = validate_production_config(settings)
+    if problems:
+        raise RuntimeError(
+            "Refusing to start with ENVIRONMENT=production and an unsafe configuration:\n- "
+            + "\n- ".join(problems)
+        )
     await init_db(document_models=ALL_DOCUMENT_MODELS)
     yield
 
@@ -53,6 +60,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Added last so it's outermost -- runs on every response, including CORS preflights and
+# unhandled-exception responses, not just ones that reach the router.
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 def _with_cors_headers(request: Request, response: JSONResponse) -> JSONResponse:
@@ -122,33 +132,10 @@ app.include_router(audit_logs.router)
 app.include_router(users.admin_router)
 
 
-@app.get("/debug-razorpay", tags=["health"], summary="TEMP: live Razorpay auth probe")
-async def debug_razorpay() -> dict[str, str]:
-    import razorpay
-
-    client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-    try:
-        order = client.order.create(
-            data={"amount": 100, "currency": "INR", "payment_capture": 1, "notes": {"debug": "probe"}}
-        )
-        return {"result": "SUCCESS", "order_id": order["id"]}
-    except Exception as exc:
-        return {"result": "FAILED", "error_type": type(exc).__name__, "error_message": str(exc)}
-
-
 @app.get("/", tags=["health"], summary="Health check")
 async def root() -> dict[str, str]:
-    # TEMP DIAGNOSTIC: masked prefix only (Key IDs aren't secret) -- to confirm what the live
-    # process actually has loaded for RAZORPAY_KEY_ID, vs. what's shown in the Render dashboard.
-    # Remove once the "Authentication failed" investigation is resolved.
-    key_prefix = settings.RAZORPAY_KEY_ID[:14] if settings.RAZORPAY_KEY_ID else None
-    secret = settings.RAZORPAY_KEY_SECRET
     return {
         "status": "ok",
         "service": settings.APP_NAME,
         "environment": settings.ENVIRONMENT,
-        "razorpay_key_prefix": key_prefix,
-        "razorpay_secret_length": str(len(secret)) if secret else "0",
-        "razorpay_secret_length_trimmed": str(len(secret.strip())) if secret else "0",
-        "razorpay_secret_last4": secret[-4:] if secret else None,
     }

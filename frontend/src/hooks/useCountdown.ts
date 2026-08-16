@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getCountdownParts, type CountdownParts } from "@/lib/utils";
+import { getCountdownParts, type CountdownParts } from "@shared/lib/utils";
 
 export function useCountdown(targetIso: string | null | undefined): CountdownParts {
   const [parts, setParts] = useState<CountdownParts>(() =>

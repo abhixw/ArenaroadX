@@ -1,21 +1,22 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarClock, Gamepad2, ListChecks, Trophy } from "lucide-react";
-import { Topbar } from "@/components/layout/Topbar";
-import { StatCard } from "@/components/dashboard/StatCard";
+import { Topbar } from "@shared/components/layout/Topbar";
+import { StatCard } from "@shared/components/ui/StatCard";
 import { NextMatchCard } from "@/components/dashboard/NextMatchCard";
 import { RecentResultsList } from "@/components/dashboard/RecentResultsList";
 import { PerformanceChart } from "@/components/dashboard/PerformanceChart";
 import { TournamentRow } from "@/components/dashboard/TournamentRow";
-import { Card } from "@/components/ui/Card";
-import { Tabs } from "@/components/ui/Tabs";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { useAuth } from "@/hooks/useAuth";
-import { useAsyncData } from "@/hooks/useAsyncData";
+import { Card } from "@shared/components/ui/Card";
+import { Tabs } from "@shared/components/ui/Tabs";
+import { EmptyState } from "@shared/components/ui/EmptyState";
+import { ErrorState } from "@shared/components/ui/ErrorState";
+import { Skeleton } from "@shared/components/ui/Skeleton";
+import { useAuth } from "@shared/hooks/useAuth";
+import { useAsyncData } from "@shared/hooks/useAsyncData";
 import { getMyTournaments } from "@/api/registrations";
-import { findNextMatch, getTournaments } from "@/api/tournaments";
-import { getGames } from "@/api/games";
+import { findNextMatch, getTournaments } from "@shared/api/tournaments";
+import { getGames } from "@shared/api/games";
 import { getRecentResults } from "@/api/results";
 import { computeDashboardStats, computePerformanceHistory, computePerformanceStats } from "@/lib/performance";
 import { describeMyTournament, matchesTab, type MyTournamentTab } from "@/lib/selectors";
@@ -32,7 +33,8 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [tab, setTab] = useState<MyTournamentTab>("ALL");
 
-  const { data: myTournaments, loading: loadingMine } = useAsyncData(getMyTournaments);
+  const { data: myTournaments, loading: loadingMine, error: myTournamentsError, refetch: refetchMine } =
+    useAsyncData(getMyTournaments);
   const { data: tournaments } = useAsyncData(getTournaments);
   const { data: games } = useAsyncData(getGames);
   const { data: nextMatch, loading: loadingNext } = useAsyncData(
@@ -103,7 +105,9 @@ export default function Dashboard() {
             </div>
 
             <div className="mt-4 space-y-3">
-              {loadingMine ? (
+              {myTournamentsError ? (
+                <ErrorState message="Couldn't load your tournaments." onRetry={refetchMine} />
+              ) : loadingMine ? (
                 <>
                   <Skeleton className="h-24 w-full" />
                   <Skeleton className="h-24 w-full" />

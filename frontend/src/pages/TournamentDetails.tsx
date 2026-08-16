@@ -1,21 +1,22 @@
 import { useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { CalendarDays, Clock, Coins, ExternalLink, Trophy, Users } from "lucide-react";
-import { Topbar } from "@/components/layout/Topbar";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { Thumb } from "@/components/ui/Thumb";
-import { TournamentStatusBadge } from "@/components/ui/Badge";
+import { Topbar } from "@shared/components/layout/Topbar";
+import { Card } from "@shared/components/ui/Card";
+import { Button } from "@shared/components/ui/Button";
+import { Skeleton } from "@shared/components/ui/Skeleton";
+import { ErrorState } from "@shared/components/ui/ErrorState";
+import { Thumb } from "@shared/components/ui/Thumb";
+import { TournamentStatusBadge } from "@shared/components/ui/Badge";
 import { LeaderboardTable } from "@/components/leaderboard/LeaderboardTable";
 import { RegistrationFlow } from "@/components/tournaments/RegistrationFlow";
-import { useAuth } from "@/hooks/useAuth";
-import { useAsyncData } from "@/hooks/useAsyncData";
-import { getTournament } from "@/api/tournaments";
-import { getGame } from "@/api/games";
+import { useAuth } from "@shared/hooks/useAuth";
+import { useAsyncData } from "@shared/hooks/useAsyncData";
+import { getTournament } from "@shared/api/tournaments";
+import { getGame } from "@shared/api/games";
 import { getRegistrationForTournament } from "@/api/registrations";
 import { getLeaderboard } from "@/api/results";
-import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { formatCurrency, formatDateTime } from "@shared/lib/utils";
 
 const PUBLISHED_STATUSES = ["RESULTS_PUBLISHED", "COMPLETED"];
 
@@ -24,7 +25,7 @@ export default function TournamentDetails() {
   const { user } = useAuth();
   const [flowOpen, setFlowOpen] = useState(false);
 
-  const { data: tournament, loading, refetch: refetchTournament } = useAsyncData(
+  const { data: tournament, loading, error, refetch: refetchTournament } = useAsyncData(
     () => getTournament(id!),
     [id],
   );
@@ -41,8 +42,12 @@ export default function TournamentDetails() {
   const isConfirmed = registration?.status === "CONFIRMED";
   const isReserved = registration?.status === "RESERVED";
 
-  if (!loading && !tournament) {
+  if (!loading && !error && !tournament) {
     return <Navigate to="/tournaments" replace />;
+  }
+
+  if (error) {
+    return <ErrorState message="Couldn't load this tournament." onRetry={refetchTournament} />;
   }
 
   if (loading || !tournament || !game) {

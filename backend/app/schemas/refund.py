@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from beanie import PydanticObjectId
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.refund import RefundStatus
 
@@ -10,7 +10,7 @@ from app.models.refund import RefundStatus
 class ProcessRefundRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    provider_reference: str
+    provider_reference: str = Field(max_length=200)
 
     @field_validator("provider_reference")
     @classmethod

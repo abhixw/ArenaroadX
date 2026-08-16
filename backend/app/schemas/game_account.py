@@ -1,14 +1,14 @@
 from datetime import datetime
 
 from beanie import PydanticObjectId
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class GameAccountUpsert(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    game_uid: str
-    game_username: str | None = None
+    game_uid: str = Field(max_length=100)
+    game_username: str | None = Field(default=None, max_length=100)
 
     @field_validator("game_uid")
     @classmethod

@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search, SlidersHorizontal } from "lucide-react";
-import { Topbar } from "@/components/layout/Topbar";
-import { Card } from "@/components/ui/Card";
+import { Topbar } from "@shared/components/layout/Topbar";
+import { Card } from "@shared/components/ui/Card";
 import { TournamentCard } from "@/components/dashboard/TournamentCard";
-import { SkeletonCard } from "@/components/ui/Skeleton";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { cn } from "@/lib/utils";
-import { useAsyncData } from "@/hooks/useAsyncData";
-import { getTournaments } from "@/api/tournaments";
-import { getGames } from "@/api/games";
-import type { TournamentStatus } from "@/types";
+import { SkeletonCard } from "@shared/components/ui/Skeleton";
+import { EmptyState } from "@shared/components/ui/EmptyState";
+import { ErrorState } from "@shared/components/ui/ErrorState";
+import { cn } from "@shared/lib/utils";
+import { useAsyncData } from "@shared/hooks/useAsyncData";
+import { getTournaments } from "@shared/api/tournaments";
+import { getGames } from "@shared/api/games";
+import type { TournamentStatus } from "@shared/types";
 
 type StatusFilter = "ALL" | "REGISTRATION_OPEN" | "LIVE" | "REGISTRATION_CLOSED" | "COMPLETED";
 
@@ -39,7 +40,7 @@ export default function Tournaments() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [gameFilter, setGameFilter] = useState<string>("ALL");
 
-  const { data: tournaments, loading } = useAsyncData(getTournaments);
+  const { data: tournaments, loading, error, refetch } = useAsyncData(getTournaments);
   const { data: games } = useAsyncData(getGames);
 
   useEffect(() => {
@@ -80,6 +81,7 @@ export default function Tournaments() {
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
+              aria-label="Search by tournament or game"
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
               placeholder="Search by tournament or game..."
@@ -121,22 +123,28 @@ export default function Tournaments() {
         </div>
       </Card>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {loading
-          ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
-          : filtered.map((t) => {
-              const game = gameMap.get(t.gameId);
-              return game ? <TournamentCard key={t.id} tournament={t} game={game} /> : null;
-            })}
-      </div>
+      {error ? (
+        <ErrorState message="Couldn't load tournaments." onRetry={refetch} />
+      ) : (
+        <>
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {loading
+              ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
+              : filtered.map((t) => {
+                  const game = gameMap.get(t.gameId);
+                  return game ? <TournamentCard key={t.id} tournament={t} game={game} /> : null;
+                })}
+          </div>
 
-      {!loading && filtered.length === 0 ? (
-        <EmptyState
-          icon={Search}
-          title="No tournaments match your filters"
-          description="Try a different search term or clear the filters."
-        />
-      ) : null}
+          {!loading && filtered.length === 0 ? (
+            <EmptyState
+              icon={Search}
+              title="No tournaments match your filters"
+              description="Try a different search term or clear the filters."
+            />
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

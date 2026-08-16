@@ -4,7 +4,7 @@
 // (GET /api/users/me/leaderboard-history via api/results.ts's getRecentResults), not
 // backend-tracked figures. Callers already have that list in hand; no extra request needed.
 import type { RecentResult } from "@/api/results";
-import type { PerformancePoint } from "@/types";
+import type { PerformancePoint } from "@shared/types";
 
 export interface PerformanceStats {
   matchesPlayed: number;

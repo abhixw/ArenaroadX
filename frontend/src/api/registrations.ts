@@ -1,4 +1,4 @@
-import { ApiError, http } from "@/api/client";
+import { ApiError, http } from "@shared/api/client";
 import {
   mapMyTournament,
   mapRegistration,
@@ -6,8 +6,8 @@ import {
   type MyTournamentDto,
   type MyTournamentEntry,
   type RegistrationDto,
-} from "@/lib/mappers";
-import type { Registration } from "@/types";
+} from "@shared/lib/mappers";
+import type { Registration } from "@shared/types";
 
 async function getGameImageMap(): Promise<Map<string, string | null>> {
   const games = await http.get<GameDto[]>("/api/games");

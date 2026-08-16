@@ -1,4 +1,5 @@
 from beanie import PydanticObjectId
+from pymongo.asynchronous.client_session import AsyncClientSession
 
 from app.models.tournament_result import TournamentResult, TournamentResultStatus
 
@@ -48,16 +49,20 @@ async def upsert(*, tournament_id: PydanticObjectId, user_id: PydanticObjectId, 
 
 
 async def bulk_update_status(
-    tournament_id: PydanticObjectId, from_status: TournamentResultStatus, to_status: TournamentResultStatus
+    tournament_id: PydanticObjectId,
+    from_status: TournamentResultStatus,
+    to_status: TournamentResultStatus,
+    *,
+    session: AsyncClientSession | None = None,
 ) -> None:
     results = await TournamentResult.find(
         TournamentResult.tournament_id == tournament_id, TournamentResult.status == from_status
     ).to_list()
     for r in results:
         r.status = to_status
-        await r.save()
+        await r.save(session=session)
 
 
-async def save_all(results: list[TournamentResult]) -> None:
+async def save_all(results: list[TournamentResult], *, session: AsyncClientSession | None = None) -> None:
     for r in results:
-        await r.save()
+        await r.save(session=session)

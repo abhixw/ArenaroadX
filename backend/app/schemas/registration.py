@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from beanie import PydanticObjectId
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.registration import RegistrationPaymentStatus, RegistrationStatus
 from app.schemas.tournament import TournamentResponse
@@ -51,7 +51,7 @@ class PlayerHistoryResponse(BaseModel):
 class DisqualifyRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    reason: str
+    reason: str = Field(max_length=2000)
 
     @field_validator("reason")
     @classmethod

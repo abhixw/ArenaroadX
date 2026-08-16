@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
 import { Trophy, Users } from "lucide-react";
-import type { Game, Tournament } from "@/types";
-import { TournamentStatusBadge } from "@/components/ui/Badge";
-import { Thumb } from "@/components/ui/Thumb";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import type { Game, Tournament } from "@shared/types";
+import { TournamentStatusBadge } from "@shared/components/ui/Badge";
+import { Thumb } from "@shared/components/ui/Thumb";
+import { formatCurrency } from "@shared/lib/utils";
 
 export function TournamentCard({ tournament, game }: { tournament: Tournament; game: Game }) {
   const ctaLabel = tournament.status === "REGISTRATION_OPEN" ? "Join Now" : "View Details";
@@ -50,28 +50,6 @@ export function TournamentCard({ tournament, game }: { tournament: Tournament; g
           </span>
         </div>
       </div>
-    </Link>
-  );
-}
-
-export function TournamentCardSmall({ tournament, game }: { tournament: Tournament; game: Game }) {
-  return (
-    <Link
-      to={`/tournaments/${tournament.id}`}
-      className="card flex items-center gap-3 p-3 transition-shadow hover:shadow-card-lg"
-    >
-      <Thumb
-        src={tournament.imageUrl}
-        alt={tournament.name}
-        className="h-12 w-12 shrink-0 rounded-xl"
-      />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-gray-900">{tournament.name}</p>
-        <p className="text-xs text-gray-400">
-          {game.name} • {formatDate(tournament.startsAt)}
-        </p>
-      </div>
-      <TournamentStatusBadge status={tournament.status} />
     </Link>
   );
 }

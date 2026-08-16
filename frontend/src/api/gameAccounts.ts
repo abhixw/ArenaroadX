@@ -1,6 +1,6 @@
-import { http } from "@/api/client";
-import { mapGameAccount, type GameAccountDto } from "@/lib/mappers";
-import type { GameAccount } from "@/types";
+import { http } from "@shared/api/client";
+import { mapGameAccount, type GameAccountDto } from "@shared/lib/mappers";
+import type { GameAccount } from "@shared/types";
 
 // GET /api/my-game-accounts
 export async function getMyGameAccounts(): Promise<GameAccount[]> {

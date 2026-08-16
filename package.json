@@ -1,0 +1,18 @@
+{
+  "name": "arenaroadx",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "frontend",
+    "admin",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev --workspace frontend",
+    "dev:admin": "npm run dev --workspace admin",
+    "build:frontend": "npm run build --workspace frontend",
+    "build:admin": "npm run build --workspace admin",
+    "lint:frontend": "npm run lint --workspace frontend",
+    "lint:admin": "npm run lint --workspace admin"
+  }
+}

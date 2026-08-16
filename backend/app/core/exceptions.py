@@ -56,6 +56,14 @@ class UserNotFoundError(AppError):
         super().__init__(message)
 
 
+class InvalidOrExpiredResetTokenError(AppError):
+    status_code = status.HTTP_400_BAD_REQUEST
+    error_code = "INVALID_OR_EXPIRED_RESET_TOKEN"
+
+    def __init__(self, message: str = "This password reset link is invalid or has expired.") -> None:
+        super().__init__(message)
+
+
 class GameNotFoundError(AppError):
     status_code = status.HTTP_404_NOT_FOUND
     error_code = "GAME_NOT_FOUND"
@@ -133,6 +141,16 @@ class RegistrationDeadlinePassedError(AppError):
     error_code = "REGISTRATION_DEADLINE_PASSED"
 
     def __init__(self, message: str = "The registration deadline for this tournament has passed.") -> None:
+        super().__init__(message)
+
+
+class AdminCannotRegisterError(AppError):
+    status_code = status.HTTP_403_FORBIDDEN
+    error_code = "ADMIN_CANNOT_REGISTER"
+
+    def __init__(
+        self, message: str = "Admin accounts cannot register as tournament participants."
+    ) -> None:
         super().__init__(message)
 
 
@@ -330,6 +348,22 @@ class EmptyCsvFileError(AppError):
         super().__init__(message)
 
 
+class InvalidFileEncodingError(AppError):
+    status_code = status.HTTP_400_BAD_REQUEST
+    error_code = "INVALID_FILE_ENCODING"
+
+    def __init__(self, message: str = "The uploaded file is not valid UTF-8 text.") -> None:
+        super().__init__(message)
+
+
+class FileTooLargeError(AppError):
+    status_code = status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
+    error_code = "FILE_TOO_LARGE"
+
+    def __init__(self, message: str = "The uploaded file exceeds the maximum allowed size.") -> None:
+        super().__init__(message)
+
+
 class ResultAlreadyPublishedError(AppError):
     status_code = status.HTTP_400_BAD_REQUEST
     error_code = "RESULT_ALREADY_PUBLISHED"
@@ -369,6 +403,14 @@ class RefundAlreadyProcessedError(AppError):
     error_code = "REFUND_ALREADY_PROCESSED"
 
     def __init__(self, message: str = "This refund has already been processed.") -> None:
+        super().__init__(message)
+
+
+class PrizeAlreadyPaidError(AppError):
+    status_code = status.HTTP_409_CONFLICT
+    error_code = "PRIZE_ALREADY_PAID"
+
+    def __init__(self, message: str = "This prize has already been marked paid.") -> None:
         super().__init__(message)
 
 

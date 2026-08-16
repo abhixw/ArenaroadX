@@ -3,7 +3,14 @@ from decimal import Decimal
 
 from beanie import PydanticObjectId
 
-from app.core.exceptions import PrizeNotFoundError, ResultsNotPublishedError, TournamentNotFoundError, UserNotFoundError
+from app.core.database import session_client
+from app.core.exceptions import (
+    PrizeAlreadyPaidError,
+    PrizeNotFoundError,
+    ResultsNotPublishedError,
+    TournamentNotFoundError,
+    UserNotFoundError,
+)
 from app.models.prize import Prize, PrizePayoutStatus
 from app.models.tournament import TournamentStatus
 from app.models.transaction import TransactionType
@@ -100,21 +107,37 @@ async def update_prize(prize_id: PydanticObjectId, payload: PrizeUpdate) -> Priz
 
 
 async def mark_prize_paid(prize_id: PydanticObjectId) -> Prize:
-    prize = await prize_repository.get_by_id(prize_id)
-    if prize is None:
+    existing = await prize_repository.get_by_id(prize_id)
+    if existing is None:
         raise PrizeNotFoundError()
 
-    prize = await prize_repository.update(
-        prize, payout_status=PrizePayoutStatus.PAID, paid_at=datetime.now(timezone.utc)
-    )
+    async def _pay(session) -> Prize:
+        # Atomic PENDING -> PAID guarded by status, not a separate read-then-write check
+        # (see prize_repository.mark_paid_if_pending) -- otherwise two concurrent calls
+        # (a double-click, a retried admin request) could both pass the "not yet paid"
+        # check and both create a ledger transaction below, double-paying the prize.
+        prize = await prize_repository.mark_paid_if_pending(
+            prize_id, paid_at=datetime.now(timezone.utc), session=session
+        )
+        if prize is None:
+            raise PrizeAlreadyPaidError()
 
-    # Every prize payment is recorded in the financial ledger (spec section 15).
-    await transaction_repository.create(
-        tournament_id=prize.tournament_id,
-        user_id=prize.user_id,
-        type=TransactionType.PRIZE,
-        amount_paise=-prize.amount_paise,
-        reference_id=prize.id,
-        note=f"Prize paid for rank {prize.rank}.",
-    )
-    return prize
+        # Every prize payment is recorded in the financial ledger (spec section 15).
+        await transaction_repository.create(
+            tournament_id=prize.tournament_id,
+            user_id=prize.user_id,
+            type=TransactionType.PRIZE,
+            amount_paise=-prize.amount_paise,
+            reference_id=prize.id,
+            note=f"Prize paid for rank {prize.rank}.",
+            session=session,
+        )
+        return prize
+
+    async with session_client(Prize).start_session() as session:
+        # with_transaction (not a bare start_transaction()) because two truly concurrent
+        # requests hitting the same document raise a WriteConflict/TransientTransactionError
+        # even with the atomic guard above -- with_transaction retries the whole callback on
+        # that specific, transient error class, so the loser cleanly reaches the
+        # PrizeAlreadyPaidError above on its retry instead of surfacing a raw 500.
+        return await session.with_transaction(_pay)

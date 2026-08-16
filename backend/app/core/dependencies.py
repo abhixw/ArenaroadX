@@ -31,6 +31,12 @@ async def get_current_user(request: Request) -> User:
     if user is None:
         raise UnauthorizedError("Invalid or expired session.")
 
+    # Missing "tv" (tokens issued before this claim existed) is treated as version 0, which
+    # matches every user's default -- so pre-existing sessions keep working until the next
+    # password reset actually bumps the version and needs to invalidate them.
+    if payload.get("tv", 0) != user.token_version:
+        raise UnauthorizedError("Invalid or expired session.")
+
     return user
 
 

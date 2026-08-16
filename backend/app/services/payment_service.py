@@ -2,6 +2,7 @@ import razorpay
 from beanie import PydanticObjectId
 
 from app.core.config import settings
+from app.core.database import session_client
 from app.core.exceptions import (
     ForbiddenError,
     PaymentNotFoundError,
@@ -66,46 +67,74 @@ async def create_order(*, user_id: PydanticObjectId, tournament_id: PydanticObje
 async def _mark_captured(
     payment: Payment, *, razorpay_payment_id: str, razorpay_signature: str | None = None
 ) -> Payment:
-    updates = {"status": PaymentStatus.CAPTURED, "razorpay_payment_id": razorpay_payment_id}
-    if razorpay_signature is not None:
-        updates["razorpay_signature"] = razorpay_signature
-    payment = await payment_repository.update(payment, **updates)
+    async def _capture(session) -> Payment:
+        # Atomic guarded transition (see payment_repository.mark_captured_if_not_already) --
+        # a client /verify call and a Razorpay webhook delivery for the same payment can
+        # race, so this must not be a separate read-then-write check.
+        captured = await payment_repository.mark_captured_if_not_already(
+            payment.id,
+            razorpay_payment_id=razorpay_payment_id,
+            razorpay_signature=razorpay_signature,
+            session=session,
+        )
+        if captured is None:
+            # Already captured by whichever of the two racing callers got there first --
+            # idempotent no-op, not an error (both verify and the webhook expect success).
+            # Must re-fetch: `payment` is this call's stale pre-capture snapshot, not
+            # necessarily the state the other, winning caller just committed.
+            return await payment_repository.get_by_id(payment.id, session=session)
 
-    registration = await registration_repository.get_by_id(payment.registration_id)
-    if registration is not None and registration.registration_status != RegistrationStatus.CONFIRMED:
-        await registration_repository.update(
-            registration,
-            registration_status=RegistrationStatus.CONFIRMED,
-            payment_status=RegistrationPaymentStatus.CAPTURED,
-            payment_id=payment.id,
-        )
-        # Every entry fee payment is recorded in the financial ledger (spec section 18).
-        await transaction_repository.create(
-            tournament_id=payment.tournament_id,
-            user_id=payment.user_id,
-            type=TransactionType.ENTRY_FEE,
-            amount_paise=payment.amount_paise,
-            reference_id=payment.id,
-            note="Entry fee captured.",
-        )
-    return payment
+        registration = await registration_repository.get_by_id(captured.registration_id)
+        if registration is not None and registration.registration_status != RegistrationStatus.CONFIRMED:
+            await registration_repository.update(
+                registration,
+                registration_status=RegistrationStatus.CONFIRMED,
+                payment_status=RegistrationPaymentStatus.CAPTURED,
+                payment_id=captured.id,
+                session=session,
+            )
+            # Every entry fee payment is recorded in the financial ledger (spec section 18).
+            await transaction_repository.create(
+                tournament_id=captured.tournament_id,
+                user_id=captured.user_id,
+                type=TransactionType.ENTRY_FEE,
+                amount_paise=captured.amount_paise,
+                reference_id=captured.id,
+                note="Entry fee captured.",
+                session=session,
+            )
+        return captured
+
+    async with session_client(Payment).start_session() as session:
+        # with_transaction (not a bare start_transaction()) so a WriteConflict from two
+        # truly concurrent captures of the same payment retries the callback instead of
+        # surfacing a raw 500 -- see the matching comment in prize_service.mark_prize_paid.
+        return await session.with_transaction(_capture)
 
 
 async def _mark_failed_and_release_slot(payment: Payment) -> Payment:
     """Per spec: 'A payment failure ... releases the slot.' This is for Razorpay's
     authoritative payment.failed webhook event, not a client-side signature mismatch
     (which just means retry -- see verify_payment)."""
-    payment = await payment_repository.update(payment, status=PaymentStatus.FAILED)
 
-    registration = await registration_repository.get_by_id(payment.registration_id)
-    if registration is not None and registration.registration_status == RegistrationStatus.PENDING_PAYMENT:
-        await registration_repository.update(
-            registration,
-            registration_status=RegistrationStatus.CANCELLED,
-            payment_status=RegistrationPaymentStatus.FAILED,
-        )
-        await registration_repository.release_slot(registration.tournament_id)
-    return payment
+    async def _fail(session) -> Payment:
+        updated = await payment_repository.update(payment, status=PaymentStatus.FAILED, session=session)
+
+        registration = await registration_repository.get_by_id(updated.registration_id)
+        if registration is not None and registration.registration_status == RegistrationStatus.PENDING_PAYMENT:
+            await registration_repository.update(
+                registration,
+                registration_status=RegistrationStatus.CANCELLED,
+                payment_status=RegistrationPaymentStatus.FAILED,
+                session=session,
+            )
+            # release_slot is itself atomically guarded ($gt: 0), so this stays a safe no-op
+            # even if with_transaction retries this callback.
+            await registration_repository.release_slot(registration.tournament_id, session=session)
+        return updated
+
+    async with session_client(Payment).start_session() as session:
+        return await session.with_transaction(_fail)
 
 
 async def verify_payment(

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 
 from beanie import PydanticObjectId
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.match_result import MatchResultStatus
 from app.models.tournament_result import TournamentResultStatus
@@ -12,28 +12,28 @@ class MatchResultCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     game_uid: str
-    placement: int | None = None
-    kills: int | None = None
+    placement: int | None = Field(default=None, ge=1)
+    kills: int | None = Field(default=None, ge=0)
     raw_data: dict[str, Any] = {}
-    evidence_reference: str | None = None
+    evidence_reference: str | None = Field(default=None, max_length=500)
 
 
 class MatchResultUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    placement: int | None = None
-    kills: int | None = None
+    placement: int | None = Field(default=None, ge=1)
+    kills: int | None = Field(default=None, ge=0)
     raw_data: dict[str, Any] | None = None
-    evidence_reference: str | None = None
+    evidence_reference: str | None = Field(default=None, max_length=500)
 
 
 class MatchResultCorrection(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    placement: int | None = None
-    kills: int | None = None
+    placement: int | None = Field(default=None, ge=1)
+    kills: int | None = Field(default=None, ge=0)
     raw_data: dict[str, Any] | None = None
-    reason: str
+    reason: str = Field(max_length=2000)
 
     @field_validator("reason")
     @classmethod

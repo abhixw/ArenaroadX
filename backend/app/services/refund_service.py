@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from beanie import PydanticObjectId
 
+from app.core.database import session_client
 from app.core.exceptions import RefundAlreadyProcessedError, RefundNotFoundError, TournamentNotFoundError
 from app.models.payment import PaymentStatus
 from app.models.refund import Refund, RefundStatus
@@ -46,10 +47,13 @@ async def create_refunds_for_cancelled_tournament(tournament_id: PydanticObjectI
     is cancelled (spec section 16). Refunds start PENDING -- actually moving the money is
     a manual admin step (process_refund), consistent with this MVP's no-automated-payouts rule."""
     confirmed = await registration_repository.list_confirmed_by_tournament(tournament_id)
+    already_refunded = await refund_repository.registration_ids_with_refund(tournament_id)
 
     created: list[Refund] = []
     for registration in confirmed:
         if registration.payment_status != RegistrationPaymentStatus.CAPTURED or registration.payment_id is None:
+            continue
+        if registration.id in already_refunded:
             continue
         payment = await payment_repository.get_by_id(registration.payment_id)
         if payment is None or payment.status != PaymentStatus.CAPTURED:
@@ -76,36 +80,52 @@ async def list_tournament_refunds(tournament_id: PydanticObjectId) -> list[Refun
 
 
 async def process_refund(refund_id: PydanticObjectId, payload: ProcessRefundRequest, processed_by: PydanticObjectId) -> Refund:
-    refund = await refund_repository.get_by_id(refund_id)
-    if refund is None:
+    existing = await refund_repository.get_by_id(refund_id)
+    if existing is None:
         raise RefundNotFoundError()
-    if refund.status == RefundStatus.PROCESSED:
-        raise RefundAlreadyProcessedError()
 
-    refund = await refund_repository.update(
-        refund,
-        status=RefundStatus.PROCESSED,
-        provider_reference=payload.provider_reference,
-        processed_by=processed_by,
-        processed_at=datetime.now(timezone.utc),
-    )
-
-    payment = await payment_repository.get_by_id(refund.payment_id)
-    if payment is not None:
-        await payment_repository.update(payment, status=PaymentStatus.REFUNDED)
-
-    registration = await registration_repository.get_by_id(refund.registration_id)
-    if registration is not None:
-        await registration_repository.update(
-            registration, registration_status=RegistrationStatus.CANCELLED, payment_status=RegistrationPaymentStatus.REFUNDED
+    async def _process(session) -> Refund:
+        # Atomic guarded transition, not a separate read-then-write check (see
+        # refund_repository.mark_processed_if_pending) -- otherwise two concurrent
+        # process-refund calls could both pass the "not yet processed" check and both
+        # mark the payment refunded / write a ledger transaction below.
+        refund = await refund_repository.mark_processed_if_pending(
+            refund_id,
+            provider_reference=payload.provider_reference,
+            processed_by=processed_by,
+            processed_at=datetime.now(timezone.utc),
+            session=session,
         )
+        if refund is None:
+            raise RefundAlreadyProcessedError()
 
-    await transaction_repository.create(
-        tournament_id=refund.tournament_id,
-        user_id=refund.user_id,
-        type=TransactionType.REFUND,
-        amount_paise=-refund.amount_paise,
-        reference_id=refund.id,
-        note=f"Refund processed, provider_reference={payload.provider_reference}.",
-    )
-    return refund
+        payment = await payment_repository.get_by_id(refund.payment_id)
+        if payment is not None:
+            await payment_repository.update(payment, status=PaymentStatus.REFUNDED, session=session)
+
+        registration = await registration_repository.get_by_id(refund.registration_id)
+        if registration is not None:
+            await registration_repository.update(
+                registration,
+                registration_status=RegistrationStatus.CANCELLED,
+                payment_status=RegistrationPaymentStatus.REFUNDED,
+                session=session,
+            )
+
+        await transaction_repository.create(
+            tournament_id=refund.tournament_id,
+            user_id=refund.user_id,
+            type=TransactionType.REFUND,
+            amount_paise=-refund.amount_paise,
+            reference_id=refund.id,
+            note=f"Refund processed, provider_reference={payload.provider_reference}.",
+            session=session,
+        )
+        return refund
+
+    async with session_client(Refund).start_session() as session:
+        # with_transaction (not a bare start_transaction()) so a WriteConflict/
+        # TransientTransactionError from two truly concurrent requests on the same refund
+        # retries the whole callback instead of surfacing a raw 500 -- see the matching
+        # comment in prize_service.mark_prize_paid.
+        return await session.with_transaction(_process)

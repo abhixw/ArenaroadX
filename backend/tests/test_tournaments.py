@@ -77,6 +77,21 @@ async def test_tournament_lifecycle_transitions(client, as_admin):
     assert invalid.json()["error"]["code"] == "INVALID_TOURNAMENT_STATUS"
 
 
+async def test_admin_cannot_register_as_participant(client, as_admin):
+    """Regression test: an admin account had no guard against registering as a tournament
+    participant, which would give it unilateral power (entering/publishing results, marking
+    its own prize paid) over a tournament it's also competing in."""
+    game_id = await _create_game(client)
+    created = await client.post("/api/admin/tournaments", json=_tournament_payload(game_id))
+    tournament_id = created.json()["data"]["id"]
+    opened = await client.post(f"/api/admin/tournaments/{tournament_id}/open-registration")
+    assert opened.status_code == 200
+
+    response = await client.post(f"/api/tournaments/{tournament_id}/register")
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "ADMIN_CANNOT_REGISTER"
+
+
 async def test_cancel_tournament_requires_reason(client, as_admin):
     game_id = await _create_game(client)
     created = await client.post("/api/admin/tournaments", json=_tournament_payload(game_id))

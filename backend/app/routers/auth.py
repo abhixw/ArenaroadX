@@ -5,7 +5,7 @@ from app.core.dependencies import get_current_user
 from app.core.exceptions import InvalidCredentialsError
 from app.core.rate_limit import rate_limit
 from app.models.user import User, UserRole
-from app.schemas.auth import LoginRequest, RegisterRequest, UpdateProfileRequest
+from app.schemas.auth import ForgotPasswordRequest, LoginRequest, RegisterRequest, ResetPasswordRequest, UpdateProfileRequest
 from app.schemas.common import DataResponse
 from app.schemas.user import UserResponse
 from app.services import auth_service
@@ -58,6 +58,28 @@ async def login(payload: LoginRequest, request: Request, response: Response) -> 
     token = auth_service.issue_access_token(user)
     _set_auth_cookie(response, token)
     return DataResponse(data=UserResponse.model_validate(user, from_attributes=True))
+
+
+@router.post(
+    "/forgot-password",
+    summary="Request a password reset email",
+    dependencies=[Depends(rate_limit("forgot_password", limit=5, window_seconds=60))],
+)
+async def forgot_password(payload: ForgotPasswordRequest) -> DataResponse[dict]:
+    await auth_service.request_password_reset(payload.email)
+    # Always the same response, whether or not the email has an account -- see
+    # auth_service.request_password_reset.
+    return DataResponse(data={"message": "If that email has an account, a reset link has been sent."})
+
+
+@router.post(
+    "/reset-password",
+    summary="Set a new password using a reset token",
+    dependencies=[Depends(rate_limit("reset_password", limit=10, window_seconds=60))],
+)
+async def reset_password(payload: ResetPasswordRequest) -> DataResponse[dict]:
+    await auth_service.reset_password(payload.token, payload.new_password)
+    return DataResponse(data={"message": "Password reset successfully."})
 
 
 @router.post("/logout", summary="Log out and clear the session cookie")

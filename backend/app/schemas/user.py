@@ -36,9 +36,9 @@ class UpdateUserStatusRequest(BaseModel):
 
 
 class AdminResetPasswordRequest(BaseModel):
-    """No self-service "forgot password" flow exists (no email infrastructure) -- this is the
-    practical substitute: an admin sets a new password directly and relays it to the player
-    out-of-band (phone/WhatsApp, matching how this platform already operates manually)."""
+    """Lets an admin set a new password directly and relay it to the player out-of-band
+    (phone/WhatsApp), for cases where the player can't complete the self-service
+    forgot-password email flow themselves (e.g. lost access to their inbox)."""
 
     model_config = ConfigDict(extra="forbid")
 

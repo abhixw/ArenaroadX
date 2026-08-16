@@ -1,18 +1,19 @@
 import { Gift } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Topbar } from "@/components/layout/Topbar";
-import { Card } from "@/components/ui/Card";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { PrizeStatusBadge } from "@/components/ui/Badge";
-import { useAuth } from "@/hooks/useAuth";
-import { useAsyncData } from "@/hooks/useAsyncData";
+import { Topbar } from "@shared/components/layout/Topbar";
+import { Card } from "@shared/components/ui/Card";
+import { Skeleton } from "@shared/components/ui/Skeleton";
+import { EmptyState } from "@shared/components/ui/EmptyState";
+import { ErrorState } from "@shared/components/ui/ErrorState";
+import { PrizeStatusBadge } from "@shared/components/ui/Badge";
+import { useAuth } from "@shared/hooks/useAuth";
+import { useAsyncData } from "@shared/hooks/useAsyncData";
 import { getMyPrizes } from "@/api/prizes";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@shared/lib/utils";
 
 export default function Prizes() {
   const { user } = useAuth();
-  const { data: prizes, loading } = useAsyncData(
+  const { data: prizes, loading, error, refetch } = useAsyncData(
     () => (user ? getMyPrizes(user.id) : Promise.resolve([])),
     [user?.id],
   );
@@ -38,7 +39,9 @@ export default function Prizes() {
       </div>
 
       <Card className="p-5">
-        {loading ? (
+        {error ? (
+          <ErrorState message="Couldn't load your prizes." onRetry={refetch} />
+        ) : loading ? (
           <div className="space-y-3">
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-16 w-full" />

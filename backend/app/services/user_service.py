@@ -21,4 +21,6 @@ async def reset_password(user_id: PydanticObjectId, new_password: str) -> User:
     user = await user_repository.get_by_id(user_id)
     if user is None:
         raise UserNotFoundError()
-    return await user_repository.update(user, password_hash=hash_password(new_password))
+    return await user_repository.update(
+        user, password_hash=hash_password(new_password), token_version=user.token_version + 1
+    )

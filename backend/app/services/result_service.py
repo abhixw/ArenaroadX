@@ -1,5 +1,6 @@
 from beanie import PydanticObjectId
 
+from app.core.database import session_client
 from app.core.exceptions import (
     MatchNotFoundError,
     MatchResultAlreadyExistsError,
@@ -77,7 +78,12 @@ async def recompute_ranks(tournament_id: PydanticObjectId, rule) -> None:
     )
     for idx, result in enumerate(ranked, start=1):
         result.rank = idx
-    await tournament_result_repository.save_all(ranked)
+
+    async def _save(session) -> None:
+        await tournament_result_repository.save_all(ranked, session=session)
+
+    async with session_client(TournamentResult).start_session() as session:
+        await session.with_transaction(_save)
 
 
 async def enter_match_result(match_id: PydanticObjectId, payload: MatchResultCreate) -> MatchResult:
@@ -204,10 +210,14 @@ async def review_results(tournament_id: PydanticObjectId) -> list[TournamentResu
         raise TournamentNotFoundError()
     # Advances the tournament's own lifecycle state too (RESULTS_PENDING -> RESULTS_REVIEW),
     # not just the per-result status -- these two state machines must move together.
-    await tournament_service.transition_status(tournament_id, TournamentStatus.RESULTS_REVIEW)
-    await tournament_result_repository.bulk_update_status(
-        tournament_id, TournamentResultStatus.DRAFT, TournamentResultStatus.APPROVED
-    )
+    async def _review(session) -> None:
+        await tournament_service.transition_status(tournament_id, TournamentStatus.RESULTS_REVIEW, session=session)
+        await tournament_result_repository.bulk_update_status(
+            tournament_id, TournamentResultStatus.DRAFT, TournamentResultStatus.APPROVED, session=session
+        )
+
+    async with session_client(TournamentResult).start_session() as session:
+        await session.with_transaction(_review)
     return await tournament_result_repository.list_by_tournament(tournament_id)
 
 
@@ -215,10 +225,16 @@ async def publish_results(tournament_id: PydanticObjectId) -> list[TournamentRes
     tournament = await tournament_repository.get_by_id(tournament_id)
     if tournament is None:
         raise TournamentNotFoundError()
-    await tournament_service.transition_status(tournament_id, TournamentStatus.RESULTS_PUBLISHED)
-    await tournament_result_repository.bulk_update_status(
-        tournament_id, TournamentResultStatus.APPROVED, TournamentResultStatus.PUBLISHED
-    )
+    async def _publish(session) -> None:
+        await tournament_service.transition_status(
+            tournament_id, TournamentStatus.RESULTS_PUBLISHED, session=session
+        )
+        await tournament_result_repository.bulk_update_status(
+            tournament_id, TournamentResultStatus.APPROVED, TournamentResultStatus.PUBLISHED, session=session
+        )
+
+    async with session_client(TournamentResult).start_session() as session:
+        await session.with_transaction(_publish)
     return await tournament_result_repository.list_by_tournament(tournament_id)
 
 

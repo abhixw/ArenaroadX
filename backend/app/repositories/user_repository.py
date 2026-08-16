@@ -14,6 +14,10 @@ async def get_by_email(email: str) -> User | None:
     return await User.find_one(User.email == email)
 
 
+async def get_by_reset_token_hash(token_hash: str) -> User | None:
+    return await User.find_one(User.password_reset_token_hash == token_hash)
+
+
 async def list_all(*, search: str | None = None, page: int = 1, page_size: int = 20) -> tuple[list[User], int]:
     query = User.find()
     if search:
