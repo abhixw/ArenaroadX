@@ -12,6 +12,7 @@ env/
 # production builds) -- committed so every production build gets this right by default,
 # regardless of whether Vercel's dashboard env vars are configured correctly.
 !frontend/.env.production
+!admin/.env.production
 
 .pytest_cache/
 .coverage
@@ -24,3 +25,4 @@ htmlcov/
 .idea/
 
 .claude/
+node_modules

@@ -22,23 +22,32 @@ class RateLimitExceededError(AppError):
         super().__init__(message)
 
 
+def check_rate_limit(bucket: str, key: str, limit: int, window_seconds: int) -> None:
+    """Raises RateLimitExceededError once `key` has made `limit` calls within
+    `window_seconds` inside the given `bucket`. Shared by the `rate_limit` FastAPI
+    dependency below (keyed by client IP) and any call site that needs a different key,
+    e.g. auth_service.request_password_reset keying on the target email as well, so a
+    single IP can't flood one victim's inbox by varying nothing but the request body."""
+    full_key = f"{bucket}:{key}"
+    now = time.monotonic()
+    window_start = now - window_seconds
+
+    timestamps = _buckets[full_key]
+    while timestamps and timestamps[0] < window_start:
+        timestamps.pop(0)
+
+    if len(timestamps) >= limit:
+        raise RateLimitExceededError()
+
+    timestamps.append(now)
+
+
 def rate_limit(bucket: str, limit: int, window_seconds: int):
     """Returns a FastAPI dependency enforcing `limit` requests per `window_seconds`,
     keyed by (bucket, client IP)."""
 
     async def _dependency(request: Request) -> None:
         client_ip = request.client.host if request.client else "unknown"
-        key = f"{bucket}:{client_ip}"
-        now = time.monotonic()
-        window_start = now - window_seconds
-
-        timestamps = _buckets[key]
-        while timestamps and timestamps[0] < window_start:
-            timestamps.pop(0)
-
-        if len(timestamps) >= limit:
-            raise RateLimitExceededError()
-
-        timestamps.append(now)
+        check_rate_limit(bucket, client_ip, limit, window_seconds)
 
     return _dependency

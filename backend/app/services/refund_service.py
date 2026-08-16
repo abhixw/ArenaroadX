@@ -80,43 +80,52 @@ async def list_tournament_refunds(tournament_id: PydanticObjectId) -> list[Refun
 
 
 async def process_refund(refund_id: PydanticObjectId, payload: ProcessRefundRequest, processed_by: PydanticObjectId) -> Refund:
-    refund = await refund_repository.get_by_id(refund_id)
-    if refund is None:
+    existing = await refund_repository.get_by_id(refund_id)
+    if existing is None:
         raise RefundNotFoundError()
-    if refund.status == RefundStatus.PROCESSED:
-        raise RefundAlreadyProcessedError()
+
+    async def _process(session) -> Refund:
+        # Atomic guarded transition, not a separate read-then-write check (see
+        # refund_repository.mark_processed_if_pending) -- otherwise two concurrent
+        # process-refund calls could both pass the "not yet processed" check and both
+        # mark the payment refunded / write a ledger transaction below.
+        refund = await refund_repository.mark_processed_if_pending(
+            refund_id,
+            provider_reference=payload.provider_reference,
+            processed_by=processed_by,
+            processed_at=datetime.now(timezone.utc),
+            session=session,
+        )
+        if refund is None:
+            raise RefundAlreadyProcessedError()
+
+        payment = await payment_repository.get_by_id(refund.payment_id)
+        if payment is not None:
+            await payment_repository.update(payment, status=PaymentStatus.REFUNDED, session=session)
+
+        registration = await registration_repository.get_by_id(refund.registration_id)
+        if registration is not None:
+            await registration_repository.update(
+                registration,
+                registration_status=RegistrationStatus.CANCELLED,
+                payment_status=RegistrationPaymentStatus.REFUNDED,
+                session=session,
+            )
+
+        await transaction_repository.create(
+            tournament_id=refund.tournament_id,
+            user_id=refund.user_id,
+            type=TransactionType.REFUND,
+            amount_paise=-refund.amount_paise,
+            reference_id=refund.id,
+            note=f"Refund processed, provider_reference={payload.provider_reference}.",
+            session=session,
+        )
+        return refund
 
     async with session_client(Refund).start_session() as session:
-        async with await session.start_transaction():
-            refund = await refund_repository.update(
-                refund,
-                status=RefundStatus.PROCESSED,
-                provider_reference=payload.provider_reference,
-                processed_by=processed_by,
-                processed_at=datetime.now(timezone.utc),
-                session=session,
-            )
-
-            payment = await payment_repository.get_by_id(refund.payment_id)
-            if payment is not None:
-                await payment_repository.update(payment, status=PaymentStatus.REFUNDED, session=session)
-
-            registration = await registration_repository.get_by_id(refund.registration_id)
-            if registration is not None:
-                await registration_repository.update(
-                    registration,
-                    registration_status=RegistrationStatus.CANCELLED,
-                    payment_status=RegistrationPaymentStatus.REFUNDED,
-                    session=session,
-                )
-
-            await transaction_repository.create(
-                tournament_id=refund.tournament_id,
-                user_id=refund.user_id,
-                type=TransactionType.REFUND,
-                amount_paise=-refund.amount_paise,
-                reference_id=refund.id,
-                note=f"Refund processed, provider_reference={payload.provider_reference}.",
-                session=session,
-            )
-    return refund
+        # with_transaction (not a bare start_transaction()) so a WriteConflict/
+        # TransientTransactionError from two truly concurrent requests on the same refund
+        # retries the whole callback instead of surfacing a raw 500 -- see the matching
+        # comment in prize_service.mark_prize_paid.
+        return await session.with_transaction(_process)

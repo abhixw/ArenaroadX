@@ -1,22 +1,22 @@
 import { useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { CalendarDays, Clock, Coins, ExternalLink, Trophy, Users } from "lucide-react";
-import { Topbar } from "@/components/layout/Topbar";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { ErrorState } from "@/components/ui/ErrorState";
-import { Thumb } from "@/components/ui/Thumb";
-import { TournamentStatusBadge } from "@/components/ui/Badge";
+import { Topbar } from "@shared/components/layout/Topbar";
+import { Card } from "@shared/components/ui/Card";
+import { Button } from "@shared/components/ui/Button";
+import { Skeleton } from "@shared/components/ui/Skeleton";
+import { ErrorState } from "@shared/components/ui/ErrorState";
+import { Thumb } from "@shared/components/ui/Thumb";
+import { TournamentStatusBadge } from "@shared/components/ui/Badge";
 import { LeaderboardTable } from "@/components/leaderboard/LeaderboardTable";
 import { RegistrationFlow } from "@/components/tournaments/RegistrationFlow";
-import { useAuth } from "@/hooks/useAuth";
-import { useAsyncData } from "@/hooks/useAsyncData";
-import { getTournament } from "@/api/tournaments";
-import { getGame } from "@/api/games";
+import { useAuth } from "@shared/hooks/useAuth";
+import { useAsyncData } from "@shared/hooks/useAsyncData";
+import { getTournament } from "@shared/api/tournaments";
+import { getGame } from "@shared/api/games";
 import { getRegistrationForTournament } from "@/api/registrations";
 import { getLeaderboard } from "@/api/results";
-import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { formatCurrency, formatDateTime } from "@shared/lib/utils";
 
 const PUBLISHED_STATUSES = ["RESULTS_PUBLISHED", "COMPLETED"];
 
@@ -169,16 +169,12 @@ export default function TournamentDetails() {
               <p className="mt-2 text-sm text-gray-500">Registration is not currently open.</p>
             )}
 
-            {/* Admins can browse the player-facing site, but registering as a participant in a
-                tournament they administer is a conflict of interest -- they'd have unilateral
-                power over that tournament's own results and prize payouts. The backend also
-                rejects this; hiding the button here just avoids the confusing round-trip. */}
-            {user?.role !== "ADMIN" && !registration && tournament.status === "REGISTRATION_OPEN" ? (
+            {!registration && tournament.status === "REGISTRATION_OPEN" ? (
               <Button className="mt-4 w-full" onClick={() => setFlowOpen(true)}>
                 Register Now
               </Button>
             ) : null}
-            {user?.role !== "ADMIN" && isReserved ? (
+            {isReserved ? (
               <Button className="mt-4 w-full" onClick={() => setFlowOpen(true)}>
                 Complete Payment
               </Button>

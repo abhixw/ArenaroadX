@@ -35,7 +35,7 @@ async def update_user_status(user_id: PydanticObjectId, payload: UpdateUserStatu
 @admin_router.post(
     "/{user_id}/reset-password",
     response_model=DataResponse[UserResponse],
-    summary="Set a new password for a user (admin only; no self-service reset flow exists)",
+    summary="Set a new password for a user (admin only)",
 )
 async def reset_password(user_id: PydanticObjectId, payload: AdminResetPasswordRequest) -> DataResponse[UserResponse]:
     user = await user_service.reset_password(user_id, payload.new_password)

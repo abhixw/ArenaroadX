@@ -28,11 +28,18 @@ async def _sweep_expired_reservations(tournament_id: PydanticObjectId) -> None:
     expired lazily, right before a new registration attempt needs accurate capacity."""
     expired = await registration_repository.list_expired_pending(tournament_id)
     for registration in expired:
+
+        async def _expire(session, registration=registration) -> None:
+            registration.registration_status = RegistrationStatus.EXPIRED
+            await registration.save(session=session)
+            # Guarded ($gt: 0), so this stays a safe no-op if with_transaction retries.
+            await registration_repository.release_slot(tournament_id, session=session)
+
         async with session_client(Registration).start_session() as session:
-            async with await session.start_transaction():
-                registration.registration_status = RegistrationStatus.EXPIRED
-                await registration.save(session=session)
-                await registration_repository.release_slot(tournament_id, session=session)
+            # with_transaction so a WriteConflict from a concurrent sweep of the same
+            # registration (two registration attempts landing at once) retries instead of
+            # surfacing a raw 500 -- see the matching comment in prize_service.mark_prize_paid.
+            await session.with_transaction(_expire)
 
 
 async def register_for_tournament(*, user_id: PydanticObjectId, tournament_id: PydanticObjectId) -> Registration:

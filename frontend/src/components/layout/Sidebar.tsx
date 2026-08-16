@@ -1,8 +1,8 @@
 import { NavLink } from "react-router-dom";
 import { CalendarDays, Gift, LayoutGrid, ListChecks, Shield, Trophy } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/useAuth";
-import { Avatar } from "@/components/ui/Avatar";
+import { cn } from "@shared/lib/utils";
+import { useAuth } from "@shared/hooks/useAuth";
+import { Avatar } from "@shared/components/ui/Avatar";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutGrid, end: true },

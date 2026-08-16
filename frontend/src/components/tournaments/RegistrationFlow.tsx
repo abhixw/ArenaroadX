@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, Loader2, ShieldCheck, XCircle } from "lucide-react";
-import { Modal } from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Button";
-import { useAuth } from "@/hooks/useAuth";
+import { Modal } from "@shared/components/ui/Modal";
+import { Button } from "@shared/components/ui/Button";
+import { useAuth } from "@shared/hooks/useAuth";
 import { useCountdown } from "@/hooks/useCountdown";
-import { formatCurrency, pad2 } from "@/lib/utils";
+import { formatCurrency, pad2 } from "@shared/lib/utils";
 import { openRazorpayCheckout } from "@/lib/razorpay";
-import { ApiError } from "@/api/client";
+import { ApiError } from "@shared/api/client";
 import { getMyGameAccounts, upsertGameAccountForTournament } from "@/api/gameAccounts";
 import { registerForTournament } from "@/api/registrations";
 import { createPaymentOrder, verifyPayment, type RazorpayOrder } from "@/api/payments";
-import type { Game, GameAccount, Registration, Tournament } from "@/types";
+import type { Game, GameAccount, Registration, Tournament } from "@shared/types";
 
 type Step = "account" | "confirm" | "payment" | "processing" | "success" | "failure";
 

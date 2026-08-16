@@ -1,15 +1,15 @@
 import { Trophy } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Topbar } from "@/components/layout/Topbar";
-import { Card } from "@/components/ui/Card";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { ErrorState } from "@/components/ui/ErrorState";
-import { Thumb } from "@/components/ui/Thumb";
-import { useAsyncData } from "@/hooks/useAsyncData";
-import { getTournaments } from "@/api/tournaments";
-import { getGames } from "@/api/games";
-import { formatDate } from "@/lib/utils";
+import { Topbar } from "@shared/components/layout/Topbar";
+import { Card } from "@shared/components/ui/Card";
+import { Skeleton } from "@shared/components/ui/Skeleton";
+import { EmptyState } from "@shared/components/ui/EmptyState";
+import { ErrorState } from "@shared/components/ui/ErrorState";
+import { Thumb } from "@shared/components/ui/Thumb";
+import { useAsyncData } from "@shared/hooks/useAsyncData";
+import { getTournaments } from "@shared/api/tournaments";
+import { getGames } from "@shared/api/games";
+import { formatDate } from "@shared/lib/utils";
 import { useMemo } from "react";
 
 const PUBLISHED = ["RESULTS_PUBLISHED", "COMPLETED"];

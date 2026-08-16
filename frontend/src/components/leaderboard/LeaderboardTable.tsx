@@ -1,6 +1,6 @@
 import { Medal } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { TournamentResultRow } from "@/types";
+import { cn } from "@shared/lib/utils";
+import type { TournamentResultRow } from "@shared/types";
 
 const medalColors: Record<number, string> = {
   1: "text-yellow-500",

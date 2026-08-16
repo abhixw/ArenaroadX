@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { Loader2, Menu, Shield, X } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@shared/hooks/useAuth";
+import { RoleMismatchRedirect } from "@shared/components/layout/RoleMismatchRedirect";
 
 export function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -20,8 +21,12 @@ export function AppLayout() {
     return <Navigate to="/login" replace />;
   }
 
+  // The admin dashboard is a separate deployment now -- an ADMIN account should never reach
+  // here at all (the backend rejects admin logins from this app's origin once ADMIN_ORIGIN is
+  // configured), but as defense in depth for local dev where that's unset, log out rather
+  // than navigating to a "/admin" route that doesn't exist in this app.
   if (user.role === "ADMIN") {
-    return <Navigate to="/admin" replace />;
+    return <RoleMismatchRedirect />;
   }
 
   return (

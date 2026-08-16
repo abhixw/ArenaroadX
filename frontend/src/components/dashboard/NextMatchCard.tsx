@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
-import type { Game, Match, Tournament } from "@/types";
+import type { Game, Match, Tournament } from "@shared/types";
 import { useCountdown } from "@/hooks/useCountdown";
-import { Button } from "@/components/ui/Button";
-import { pad2 } from "@/lib/utils";
-import { Card } from "@/components/ui/Card";
-import { Thumb } from "@/components/ui/Thumb";
+import { Button } from "@shared/components/ui/Button";
+import { pad2 } from "@shared/lib/utils";
+import { Card } from "@shared/components/ui/Card";
+import { Thumb } from "@shared/components/ui/Thumb";
 
 export function NextMatchCard({
   tournament,

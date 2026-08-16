@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, LogOut, Mail, Phone } from "lucide-react";
-import { Topbar } from "@/components/layout/Topbar";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { Avatar } from "@/components/ui/Avatar";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { Thumb } from "@/components/ui/Thumb";
-import { useAuth } from "@/hooks/useAuth";
-import { useAsyncData } from "@/hooks/useAsyncData";
-import { ApiError } from "@/api/client";
+import { Topbar } from "@shared/components/layout/Topbar";
+import { Card } from "@shared/components/ui/Card";
+import { Button } from "@shared/components/ui/Button";
+import { Avatar } from "@shared/components/ui/Avatar";
+import { Skeleton } from "@shared/components/ui/Skeleton";
+import { Thumb } from "@shared/components/ui/Thumb";
+import { useAuth } from "@shared/hooks/useAuth";
+import { useAsyncData } from "@shared/hooks/useAsyncData";
+import { ApiError } from "@shared/api/client";
 import { getRecentResults } from "@/api/results";
-import { getTournaments } from "@/api/tournaments";
+import { getTournaments } from "@shared/api/tournaments";
 import { computePerformanceStats } from "@/lib/performance";
-import { formatDate } from "@/lib/utils";
+import { formatDate } from "@shared/lib/utils";
 
 export default function Profile() {
   const { user, logout, updateProfile } = useAuth();

@@ -6,8 +6,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { PerformancePoint } from "@/types";
-import { Card } from "@/components/ui/Card";
+import type { PerformancePoint } from "@shared/types";
+import { Card } from "@shared/components/ui/Card";
 
 interface PerformanceStats {
   matchesPlayed: number;

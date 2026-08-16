@@ -56,6 +56,24 @@ class LoginRequest(BaseModel):
     password: str = Field(max_length=PASSWORD_MAX_LENGTH)
 
 
+class ForgotPasswordRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(max_length=512)
+    new_password: str = Field(max_length=PASSWORD_MAX_LENGTH)
+
+    @field_validator("new_password")
+    @classmethod
+    def password_strong(cls, value: str) -> str:
+        return validate_password_strength(value)
+
+
 class UpdateProfileRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

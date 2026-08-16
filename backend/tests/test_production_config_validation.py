@@ -13,6 +13,8 @@ def _base_kwargs(**overrides) -> dict:
         RAZORPAY_KEY_ID="rzp_live_abcdefghijklmn",
         RAZORPAY_KEY_SECRET="a_real_looking_live_secret_value",
         RAZORPAY_WEBHOOK_SECRET="a_real_looking_webhook_secret",
+        SMTP_HOST="smtp.example.com",
+        FRONTEND_URL="https://arenaroadx.vercel.app",
     )
     kwargs.update(overrides)
     return kwargs
@@ -62,3 +64,15 @@ def test_localhost_cors_origin_is_flagged():
     s = Settings(**_base_kwargs(CORS_ORIGINS="http://localhost:5173"))
     problems = validate_production_config(s)
     assert any("CORS_ORIGINS" in p for p in problems)
+
+
+def test_missing_smtp_host_is_flagged():
+    s = Settings(**_base_kwargs(SMTP_HOST=""))
+    problems = validate_production_config(s)
+    assert any("SMTP_HOST" in p for p in problems)
+
+
+def test_localhost_frontend_url_is_flagged():
+    s = Settings(**_base_kwargs(FRONTEND_URL="http://localhost:5173"))
+    problems = validate_production_config(s)
+    assert any("FRONTEND_URL" in p for p in problems)

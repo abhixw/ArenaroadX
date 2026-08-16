@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search, SlidersHorizontal } from "lucide-react";
-import { Topbar } from "@/components/layout/Topbar";
-import { Card } from "@/components/ui/Card";
+import { Topbar } from "@shared/components/layout/Topbar";
+import { Card } from "@shared/components/ui/Card";
 import { TournamentCard } from "@/components/dashboard/TournamentCard";
-import { SkeletonCard } from "@/components/ui/Skeleton";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { ErrorState } from "@/components/ui/ErrorState";
-import { cn } from "@/lib/utils";
-import { useAsyncData } from "@/hooks/useAsyncData";
-import { getTournaments } from "@/api/tournaments";
-import { getGames } from "@/api/games";
-import type { TournamentStatus } from "@/types";
+import { SkeletonCard } from "@shared/components/ui/Skeleton";
+import { EmptyState } from "@shared/components/ui/EmptyState";
+import { ErrorState } from "@shared/components/ui/ErrorState";
+import { cn } from "@shared/lib/utils";
+import { useAsyncData } from "@shared/hooks/useAsyncData";
+import { getTournaments } from "@shared/api/tournaments";
+import { getGames } from "@shared/api/games";
+import type { TournamentStatus } from "@shared/types";
 
 type StatusFilter = "ALL" | "REGISTRATION_OPEN" | "LIVE" | "REGISTRATION_CLOSED" | "COMPLETED";
 

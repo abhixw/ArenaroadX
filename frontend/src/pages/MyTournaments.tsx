@@ -1,15 +1,15 @@
 import { useMemo, useState } from "react";
 import { ListChecks } from "lucide-react";
-import { Topbar } from "@/components/layout/Topbar";
-import { Card } from "@/components/ui/Card";
-import { Tabs } from "@/components/ui/Tabs";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { ErrorState } from "@/components/ui/ErrorState";
+import { Topbar } from "@shared/components/layout/Topbar";
+import { Card } from "@shared/components/ui/Card";
+import { Tabs } from "@shared/components/ui/Tabs";
+import { Skeleton } from "@shared/components/ui/Skeleton";
+import { EmptyState } from "@shared/components/ui/EmptyState";
+import { ErrorState } from "@shared/components/ui/ErrorState";
 import { TournamentRow } from "@/components/dashboard/TournamentRow";
-import { useAsyncData } from "@/hooks/useAsyncData";
+import { useAsyncData } from "@shared/hooks/useAsyncData";
 import { getMyTournaments } from "@/api/registrations";
-import { getGames } from "@/api/games";
+import { getGames } from "@shared/api/games";
 import { describeMyTournament, matchesTab, type MyTournamentTab } from "@/lib/selectors";
 import { Link } from "react-router-dom";
 

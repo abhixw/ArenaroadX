@@ -1,15 +1,15 @@
 import { ArrowLeft } from "lucide-react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { Topbar } from "@/components/layout/Topbar";
-import { Card } from "@/components/ui/Card";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { ErrorState } from "@/components/ui/ErrorState";
-import { TournamentStatusBadge } from "@/components/ui/Badge";
+import { Topbar } from "@shared/components/layout/Topbar";
+import { Card } from "@shared/components/ui/Card";
+import { Skeleton } from "@shared/components/ui/Skeleton";
+import { ErrorState } from "@shared/components/ui/ErrorState";
+import { TournamentStatusBadge } from "@shared/components/ui/Badge";
 import { LeaderboardTable } from "@/components/leaderboard/LeaderboardTable";
-import { useAuth } from "@/hooks/useAuth";
-import { useAsyncData } from "@/hooks/useAsyncData";
-import { getTournament } from "@/api/tournaments";
-import { getGame } from "@/api/games";
+import { useAuth } from "@shared/hooks/useAuth";
+import { useAsyncData } from "@shared/hooks/useAsyncData";
+import { getTournament } from "@shared/api/tournaments";
+import { getGame } from "@shared/api/games";
 import { getLeaderboard } from "@/api/results";
 
 export default function LeaderboardDetail() {

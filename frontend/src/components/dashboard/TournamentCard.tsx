@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
 import { Trophy, Users } from "lucide-react";
-import type { Game, Tournament } from "@/types";
-import { TournamentStatusBadge } from "@/components/ui/Badge";
-import { Thumb } from "@/components/ui/Thumb";
-import { formatCurrency } from "@/lib/utils";
+import type { Game, Tournament } from "@shared/types";
+import { TournamentStatusBadge } from "@shared/components/ui/Badge";
+import { Thumb } from "@shared/components/ui/Thumb";
+import { formatCurrency } from "@shared/lib/utils";
 
 export function TournamentCard({ tournament, game }: { tournament: Tournament; game: Game }) {
   const ctaLabel = tournament.status === "REGISTRATION_OPEN" ? "Join Now" : "View Details";

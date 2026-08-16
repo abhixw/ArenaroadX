@@ -1,6 +1,6 @@
-import { http } from "@/api/client";
-import { mapLeaderboardRow, type LeaderboardEntryDto, type LeaderboardHistoryEntryDto } from "@/lib/mappers";
-import type { Tournament, TournamentResultRow } from "@/types";
+import { http } from "@shared/api/client";
+import { mapLeaderboardRow, type LeaderboardEntryDto, type LeaderboardHistoryEntryDto } from "@shared/lib/mappers";
+import type { Tournament, TournamentResultRow } from "@shared/types";
 
 // GET /api/tournaments/{id}/leaderboard (published results only)
 export async function getLeaderboard(tournamentId: string): Promise<TournamentResultRow[]> {

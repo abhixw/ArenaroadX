@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
 import { Calendar, Users } from "lucide-react";
 import type { ReactNode } from "react";
-import type { Game, Tournament } from "@/types";
-import { TournamentStatusBadge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import { Thumb } from "@/components/ui/Thumb";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import type { Game, Tournament } from "@shared/types";
+import { TournamentStatusBadge } from "@shared/components/ui/Badge";
+import { Button } from "@shared/components/ui/Button";
+import { Thumb } from "@shared/components/ui/Thumb";
+import { formatCurrency, formatDate } from "@shared/lib/utils";
 
 interface TournamentRowProps {
   tournament: Tournament;

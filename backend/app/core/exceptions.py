@@ -56,6 +56,14 @@ class UserNotFoundError(AppError):
         super().__init__(message)
 
 
+class InvalidOrExpiredResetTokenError(AppError):
+    status_code = status.HTTP_400_BAD_REQUEST
+    error_code = "INVALID_OR_EXPIRED_RESET_TOKEN"
+
+    def __init__(self, message: str = "This password reset link is invalid or has expired.") -> None:
+        super().__init__(message)
+
+
 class GameNotFoundError(AppError):
     status_code = status.HTTP_404_NOT_FOUND
     error_code = "GAME_NOT_FOUND"

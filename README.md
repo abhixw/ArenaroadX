@@ -12,8 +12,9 @@ the match, records the outcome, and enters it into the platform by hand.
 JWT auth in HTTP-only cookies, Razorpay SDK (Standard Checkout, including UPI).
 
 **Frontend** — React 19 + TypeScript, Vite, React Router, Tailwind CSS, Razorpay Checkout.js.
-A single app and a single deployment: the player-facing site and the admin dashboard are both
-just routes (`/admin/*`) in the same build, gated by the logged-in user's role.
+Two separate apps/deployments — the player site (`frontend/`) and the admin dashboard (`admin/`) —
+sharing UI components, the API client, and types from `packages/shared/`, an npm workspace member
+(no build step of its own; both apps compile its source directly).
 
 ## Architecture
 
@@ -28,9 +29,11 @@ business logic (validation, state transitions, orchestration). Repositories are 
 talks to MongoDB. Money is stored as integer paise throughout the backend and converted to rupees
 only at the API boundary.
 
-Frontend: plain page components under `src/pages/` (and `src/pages/admin/`) and a thin typed API
-client per resource under `src/api/`. `/admin/*` routes are wrapped in `AdminLayout`, which
-redirects any non-admin user back to `/` — that's the only gate; there's no separate build.
+Frontend: plain page components under `src/pages/` and a thin typed API client per resource under
+`src/api/`, in both `frontend/` (player) and `admin/`. Each app's top-level layout (`AppLayout` /
+`AdminLayout`) checks the logged-in user's role and logs out anyone who doesn't belong in that
+app; the backend's `ADMIN_ORIGIN` setting is the stronger guarantee (admin credentials are
+rejected outright from the player app's origin, and vice versa) once it's configured.
 
 ## How a tournament actually runs
 
@@ -120,24 +123,21 @@ enter each player's result manually as it comes in → review → publish → as
 winners → mark paid. Cancel a tournament at any point before results are published and refunds are
 generated automatically for anyone who'd paid.
 
-## Running the frontend
+## Running the frontends
 
-One app, one dev server, one port. The player site lives at `/`, the admin dashboard at `/admin` —
-which one you see after logging in depends on your account's role, not on which URL/build you're
-running.
+Two apps, two dev servers, two ports — run both from the repo root (an npm workspace covering
+`frontend/`, `admin/`, and `packages/shared/`; one `npm install` at the root installs all three):
 
 ```bash
-npm run dev   # http://localhost:5173
+npm install               # once, from the repo root
+npm run dev:frontend      # player app  -> http://localhost:5173
+npm run dev:admin         # admin app   -> http://localhost:5174
 ```
 
-Log in with a player account to see the player app; log in with an admin account (or just visit
-`/admin` directly, which bounces you to `/login` if you're not authenticated) to see the admin
-dashboard. `CORS_ORIGINS` in the backend `.env` should list this one origin.
+(Or `cd frontend && npm run dev` / `cd admin && npm run dev` directly — same thing.) `CORS_ORIGINS`
+in the backend `.env` should list both origins.
 
 ## Project structure
-
-Two fully independent, separately deployable folders live side by side in this one repo, with
-shared project files (this README, `render.yaml`, `.gitignore`) at the repo root, outside both:
 
 ```
 backend/
@@ -151,14 +151,24 @@ backend/
   scripts/         create_admin, seed_games, seed_demo_tournament
   tests/           pytest suite
   requirements.txt, pytest.ini, .env.example
-frontend/
-  src/pages/           player-facing pages
-  src/pages/admin/     admin dashboard pages
-  src/components/      shared UI + page-specific components
-  src/api/             typed API client, one module per resource (src/api/admin/ for admin-only calls)
-  src/contexts/        auth context/provider
-  src/lib/             DTO<->frontend-type mappers, formatting helpers, Razorpay Checkout wrapper
-render.yaml            Render deployment blueprint for backend/
+frontend/                 player app (deploys separately from admin/)
+  src/pages/               player-facing pages
+  src/components/          player-only components
+  src/api/                 typed API client, one module per player-facing resource
+admin/                     admin app (deploys separately from frontend/)
+  src/pages/admin/          admin dashboard pages
+  src/components/admin/     admin-only components
+  src/api/admin/            typed API client, one module per admin resource (CRUD/write operations)
+packages/shared/           npm workspace member, no build step -- both apps compile its source
+                            directly via a `@shared/*` path alias (see either app's vite.config.ts)
+  src/components/ui/        generic UI primitives (Button, Card, Modal, ...)
+  src/components/layout/    AuthLayout, Topbar, RoleMismatchRedirect
+  src/contexts/             AuthContext (shared session state)
+  src/api/                  API client, auth calls, and read-only lookups both apps need
+                             (tournaments/games GET endpoints -- distinct from admin/src/api/admin/,
+                             which holds the write/CRUD endpoints only the admin app calls)
+  src/lib/, src/types/      DTO<->frontend-type mappers, formatting helpers, shared types
+render.yaml                Render deployment blueprint for backend/
 README.md
 ```
 
@@ -207,19 +217,20 @@ README.md
 
 6. Open API docs at `http://127.0.0.1:8010/docs`.
 
-### Frontend
+### Frontends
 
-1. Install dependencies:
+1. Install dependencies once, from the repo root (an npm workspace covering both apps and the
+   shared package):
 
    ```bash
-   cd frontend
    npm install
    ```
 
 2. Copy `frontend/.env.example` to `frontend/.env` and set `VITE_API_URL` (the backend URL) and
-   `VITE_RAZORPAY_KEY_ID` (safe to expose client-side — it's the public key, not the secret).
+   `VITE_RAZORPAY_KEY_ID` (safe to expose client-side — it's the public key, not the secret). Copy
+   `admin/.env.example` to `admin/.env` and set `VITE_API_URL` the same way (no Razorpay key needed).
 
-3. Run the dev server (see [Running the frontend](#running-the-frontend)).
+3. Run the dev servers (see [Running the frontends](#running-the-frontends)).
 
 ## Tests
 
@@ -233,19 +244,23 @@ against production data. Razorpay calls are mocked in tests — no real Razorpay
 ## Environment variables
 
 Backend: see `.env.example` for the full list (MongoDB, JWT, Razorpay, cookie settings,
-`CORS_ORIGINS`, initial admin credentials). Frontend: see `frontend/.env.example`
-(`VITE_API_URL`, `VITE_RAZORPAY_KEY_ID`). All secrets are read from the environment and are never
-hardcoded.
+`CORS_ORIGINS`, `ADMIN_ORIGIN`, initial admin credentials). Frontends: `frontend/.env.example`
+(`VITE_API_URL`, `VITE_RAZORPAY_KEY_ID`) and `admin/.env.example` (`VITE_API_URL`). All secrets are
+read from the environment and are never hardcoded.
 
-`ADMIN_ORIGIN` (backend) is a leftover hook for a dual-deployment setup this project doesn't use
-anymore — leave it blank. If set, it would restrict ADMIN-role logins to one specific frontend
-origin; with a single deployment there's nothing meaningful to restrict it to.
+`ADMIN_ORIGIN` (backend) restricts ADMIN-role logins to the admin app's exact deployed origin (and
+rejects non-admin logins from that same origin) — set it once you know the admin app's URL. Blank
+disables the check, which is fine for early local dev but should be set before real admin
+credentials exist, since it's the actual enforcement that the two dashboards are separate; each
+app's own frontend-side role check (see Architecture, above) is a UX nicety on top of it, not a
+substitute.
 
 ## Deployment
 
-Backend deploys to **Render**, frontend deploys to **Vercel** — both directly from this one repo,
-no need to split it into separate repos. Render/Vercel each let you pick a subfolder as the
-project's root, so the existing `backend-at-repo-root` / `frontend/` layout already works as-is.
+Backend deploys to **Render**, both frontends deploy to **Vercel as two separate projects** — all
+directly from this one repo, no need to split it into separate repos. Render/Vercel each let you
+pick a subfolder as the project's root, so the existing `backend-at-repo-root` / `frontend/` /
+`admin/` layout already works as-is.
 
 ### Backend → Render
 
@@ -263,20 +278,21 @@ dashboard.
 **Set `CORS_ORIGINS` to your deployed Vercel URL(s)** (comma-separated, no trailing slash) once you
 know them — the backend rejects cross-origin requests from anything not in that list.
 
-### Frontend → Vercel
+### Frontends → Vercel (two projects)
 
-One Vercel project for the whole `frontend/` folder — the player site and admin dashboard are both
-served from it, split by route (`/admin/*`) and gated by role, not by a separate build:
+Two separate Vercel projects against this one repo — one per app, both pointed at the same Render
+backend:
 
-| Setting | Value |
-|---|---|
-| Root Directory | `frontend` |
-| Framework Preset | Vite |
-| Build Command | `npm run build` |
-| Env: `VITE_API_URL` | leave the value **empty** (see below) |
-| Env: `VITE_RAZORPAY_KEY_ID` | Razorpay key ID (public, safe to expose) |
+| Setting | Player (`frontend/`) | Admin (`admin/`) |
+|---|---|---|
+| Root Directory | `frontend` | `admin` |
+| Framework Preset | Vite | Vite |
+| Build Command | `npm run build` | `npm run build` |
+| Env: `VITE_API_URL` | leave the value **empty** (see below) | leave the value **empty** |
+| Env: `VITE_RAZORPAY_KEY_ID` | Razorpay key ID (public, safe to expose) | not needed |
 
-`frontend/vercel.json` does two things, both required:
+Each app's own `vercel.json` (`frontend/vercel.json`, `admin/vercel.json`) does two things, both
+required:
 
 ```json
 {
@@ -294,6 +310,9 @@ served from it, split by route (`/admin/*`) and gated by role, not by a separate
 - The `/(.*)` rule is the standard SPA fallback — without it, refreshing on any client-side route
   (e.g. `/tournaments`) 404s, since React Router's routes only exist in the JS bundle, not as real
   server paths.
+
+Once both are deployed, set the backend's `CORS_ORIGINS` to both Vercel URLs (comma-separated) and
+`ADMIN_ORIGIN` to the admin project's URL — see [Environment variables](#environment-variables).
 
 ### Cookies in production
 

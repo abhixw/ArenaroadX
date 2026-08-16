@@ -1,6 +1,6 @@
-import { http } from "@/api/client";
-import { mapPrize, type MyPrizeDto } from "@/lib/mappers";
-import type { Prize } from "@/types";
+import { http } from "@shared/api/client";
+import { mapPrize, type MyPrizeDto } from "@shared/lib/mappers";
+import type { Prize } from "@shared/types";
 
 // GET /api/users/me/prizes
 export async function getMyPrizes(userId: string): Promise<Prize[]> {

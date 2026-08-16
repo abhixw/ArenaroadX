@@ -1,15 +1,15 @@
 import { Gift } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Topbar } from "@/components/layout/Topbar";
-import { Card } from "@/components/ui/Card";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { ErrorState } from "@/components/ui/ErrorState";
-import { PrizeStatusBadge } from "@/components/ui/Badge";
-import { useAuth } from "@/hooks/useAuth";
-import { useAsyncData } from "@/hooks/useAsyncData";
+import { Topbar } from "@shared/components/layout/Topbar";
+import { Card } from "@shared/components/ui/Card";
+import { Skeleton } from "@shared/components/ui/Skeleton";
+import { EmptyState } from "@shared/components/ui/EmptyState";
+import { ErrorState } from "@shared/components/ui/ErrorState";
+import { PrizeStatusBadge } from "@shared/components/ui/Badge";
+import { useAuth } from "@shared/hooks/useAuth";
+import { useAsyncData } from "@shared/hooks/useAsyncData";
 import { getMyPrizes } from "@/api/prizes";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@shared/lib/utils";
 
 export default function Prizes() {
   const { user } = useAuth();

@@ -1,6 +1,6 @@
-import { http } from "@/api/client";
-import { mapPayment, type PaymentDto } from "@/lib/mappers";
-import type { Payment } from "@/types";
+import { http } from "@shared/api/client";
+import { mapPayment, type PaymentDto } from "@shared/lib/mappers";
+import type { Payment } from "@shared/types";
 
 export interface RazorpayOrder {
   paymentId: string;

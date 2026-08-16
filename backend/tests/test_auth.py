@@ -1,6 +1,11 @@
+import re
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
 from app.core.config import settings
+from app.services import auth_service
+from tests.conftest import login_as
 
 pytestmark = pytest.mark.asyncio
 
@@ -151,3 +156,126 @@ async def test_admin_origin_separation(client, user_factory, admin_factory, monk
     )
     assert user_from_admin_origin.status_code == 401
     assert user_from_admin_origin.json()["error"]["code"] == "INVALID_CREDENTIALS"
+
+
+def _capture_sent_emails(monkeypatch):
+    sent: list[dict] = []
+    monkeypatch.setattr(auth_service, "send_email", lambda **kwargs: sent.append(kwargs))
+    return sent
+
+
+def _extract_reset_token(email_body: str) -> str:
+    match = re.search(r"reset-password\?token=([^\s]+)", email_body)
+    assert match, f"no reset link found in email body: {email_body!r}"
+    return match.group(1)
+
+
+async def test_forgot_password_unknown_email_returns_generic_success(client, monkeypatch):
+    sent = _capture_sent_emails(monkeypatch)
+
+    response = await client.post("/api/auth/forgot-password", json={"email": "nobody@example.com"})
+    assert response.status_code == 200
+    assert sent == []
+
+
+async def test_forgot_password_then_reset_password_lets_user_log_in_with_new_password(client, user_factory, monkeypatch):
+    user = await user_factory(email="reset-me@example.com")
+    sent = _capture_sent_emails(monkeypatch)
+
+    forgot = await client.post("/api/auth/forgot-password", json={"email": user.email})
+    assert forgot.status_code == 200
+    assert len(sent) == 1
+    assert sent[0]["to"] == user.email
+    token = _extract_reset_token(sent[0]["body"])
+
+    reset = await client.post("/api/auth/reset-password", json={"token": token, "new_password": "NewPass1"})
+    assert reset.status_code == 200
+
+    old_password_login = await client.post("/api/auth/login", json={"email": user.email, "password": "Password1"})
+    assert old_password_login.status_code == 401
+
+    new_password_login = await client.post("/api/auth/login", json={"email": user.email, "password": "NewPass1"})
+    assert new_password_login.status_code == 200
+
+
+async def test_reset_password_token_is_single_use(client, user_factory, monkeypatch):
+    user = await user_factory(email="single-use@example.com")
+    sent = _capture_sent_emails(monkeypatch)
+
+    await client.post("/api/auth/forgot-password", json={"email": user.email})
+    token = _extract_reset_token(sent[0]["body"])
+
+    first = await client.post("/api/auth/reset-password", json={"token": token, "new_password": "NewPass1"})
+    assert first.status_code == 200
+
+    second = await client.post("/api/auth/reset-password", json={"token": token, "new_password": "AnotherPass1"})
+    assert second.status_code == 400
+    assert second.json()["error"]["code"] == "INVALID_OR_EXPIRED_RESET_TOKEN"
+
+
+async def test_reset_password_invalid_token_rejected(client):
+    response = await client.post(
+        "/api/auth/reset-password", json={"token": "not-a-real-token", "new_password": "NewPass1"}
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "INVALID_OR_EXPIRED_RESET_TOKEN"
+
+
+async def test_reset_password_expired_token_rejected(client, user_factory, monkeypatch):
+    user = await user_factory(email="expired@example.com")
+    sent = _capture_sent_emails(monkeypatch)
+
+    await client.post("/api/auth/forgot-password", json={"email": user.email})
+    token = _extract_reset_token(sent[0]["body"])
+
+    await user.set({"password_reset_expires_at": datetime.now(timezone.utc) - timedelta(minutes=1)})
+
+    response = await client.post("/api/auth/reset-password", json={"token": token, "new_password": "NewPass1"})
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "INVALID_OR_EXPIRED_RESET_TOKEN"
+
+
+async def test_reset_password_invalidates_existing_sessions(client, as_user, monkeypatch):
+    old_session_cookie = client.cookies.get(settings.COOKIE_NAME)
+    assert old_session_cookie is not None
+
+    sent = _capture_sent_emails(monkeypatch)
+    await client.post("/api/auth/forgot-password", json={"email": as_user.email})
+    token = _extract_reset_token(sent[0]["body"])
+
+    reset = await client.post("/api/auth/reset-password", json={"token": token, "new_password": "NewPass1"})
+    assert reset.status_code == 200
+
+    client.cookies.set(settings.COOKIE_NAME, old_session_cookie)
+    stale_session = await client.get("/api/auth/me")
+    assert stale_session.status_code == 401
+
+
+async def test_admin_reset_password_invalidates_existing_sessions(client, as_admin, user_factory, admin_factory):
+    target = await user_factory(email="admin-invalidated@example.com")
+    target_client_login = await client.post(
+        "/api/auth/login", json={"email": target.email, "password": "Password1"}
+    )
+    assert target_client_login.status_code == 200
+    old_session_cookie = client.cookies.get(settings.COOKIE_NAME)
+
+    admin = await admin_factory(email="acting-admin@example.com")
+    await login_as(client, admin)
+
+    reset = await client.post(f"/api/admin/users/{target.id}/reset-password", json={"new_password": "NewPass1"})
+    assert reset.status_code == 200
+
+    client.cookies.set(settings.COOKIE_NAME, old_session_cookie)
+    stale_session = await client.get("/api/auth/me")
+    assert stale_session.status_code == 401
+
+
+async def test_reset_password_rejects_weak_password(client, user_factory, monkeypatch):
+    user = await user_factory(email="weak-reset@example.com")
+    sent = _capture_sent_emails(monkeypatch)
+
+    await client.post("/api/auth/forgot-password", json={"email": user.email})
+    token = _extract_reset_token(sent[0]["body"])
+
+    response = await client.post("/api/auth/reset-password", json={"token": token, "new_password": "weak"})
+    assert response.status_code == 422

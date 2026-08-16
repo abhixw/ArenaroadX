@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import type { RecentResult } from "@/api/results";
-import { Card } from "@/components/ui/Card";
-import { Thumb } from "@/components/ui/Thumb";
+import { Card } from "@shared/components/ui/Card";
+import { Thumb } from "@shared/components/ui/Thumb";
 
 export function RecentResultsList({ results }: { results: RecentResult[] }) {
   return (
