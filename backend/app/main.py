@@ -164,3 +164,28 @@ async def debug_create_order(tournament_id: str, email: str) -> dict[str, str]:
             "error": str(exc),
             "trace": traceback.format_exc()[-1800:],
         }
+
+
+@app.get("/debug-razorpay-raw", tags=["health"], summary="TEMP: raw HTTP call to Razorpay, bypassing the SDK")
+async def debug_razorpay_raw() -> dict[str, str]:
+    import base64
+
+    import httpx
+
+    key_id = settings.RAZORPAY_KEY_ID
+    key_secret = settings.RAZORPAY_KEY_SECRET
+    basic = base64.b64encode(f"{key_id}:{key_secret}".encode()).decode()
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.post(
+            "https://api.razorpay.com/v1/orders",
+            headers={"Authorization": f"Basic {basic}", "Content-Type": "application/json"},
+            json={"amount": 100, "currency": "INR", "receipt": "debug-raw"},
+        )
+
+    return {
+        "status_code": str(response.status_code),
+        "body": response.text[:500],
+        "key_id_len": str(len(key_id)),
+        "key_secret_len": str(len(key_secret)),
+    }
