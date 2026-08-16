@@ -132,6 +132,23 @@ app.include_router(audit_logs.router)
 app.include_router(users.admin_router)
 
 
+@app.get("/debug-auth", tags=["health"], summary="TEMP: live password-verify probe")
+async def debug_auth(email: str, password: str) -> dict[str, str]:
+    from app.core.security import verify_password
+    from app.repositories import user_repository
+
+    user = await user_repository.get_by_email(email)
+    if user is None:
+        return {"result": "USER_NOT_FOUND"}
+    matches = verify_password(password, user.password_hash)
+    return {
+        "result": "MATCH" if matches else "NO_MATCH",
+        "user_id": str(user.id),
+        "role": user.role.value,
+        "hash_prefix": user.password_hash[:20],
+    }
+
+
 @app.get("/", tags=["health"], summary="Health check")
 async def root() -> dict[str, str]:
     return {
