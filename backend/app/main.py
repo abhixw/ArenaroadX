@@ -132,6 +132,11 @@ app.include_router(audit_logs.router)
 app.include_router(users.admin_router)
 
 
+@app.get("/debug-admin-origin", tags=["health"], summary="TEMP: show current ADMIN_ORIGIN setting")
+async def debug_admin_origin() -> dict[str, str]:
+    return {"admin_origin": settings.ADMIN_ORIGIN or "(empty)"}
+
+
 @app.get("/debug-auth", tags=["health"], summary="TEMP: live password-verify probe")
 async def debug_auth(email: str, password: str) -> dict[str, str]:
     from app.core.security import verify_password
