@@ -140,3 +140,27 @@ async def root() -> dict[str, str]:
         "service": settings.APP_NAME,
         "environment": settings.ENVIRONMENT,
     }
+
+
+@app.get("/debug-create-order", tags=["health"], summary="TEMP: real create_order probe, bypassing DEBUG masking")
+async def debug_create_order(tournament_id: str, email: str) -> dict[str, str]:
+    import traceback
+
+    from beanie import PydanticObjectId
+
+    from app.repositories import user_repository
+    from app.services import payment_service
+
+    try:
+        user = await user_repository.get_by_email(email)
+        if user is None:
+            return {"result": "USER_NOT_FOUND"}
+        payment = await payment_service.create_order(user_id=user.id, tournament_id=PydanticObjectId(tournament_id))
+        return {"result": "SUCCESS", "payment_id": str(payment.id)}
+    except Exception as exc:
+        return {
+            "result": "FAILED",
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+            "trace": traceback.format_exc()[-1800:],
+        }
